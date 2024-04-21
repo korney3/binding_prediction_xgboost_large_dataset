@@ -24,6 +24,7 @@ def main():
     args = parse_args()
     current_date = time.strftime("%Y-%m-%d_%H-%M-%S")
     logs_dir = os.path.join('logs', current_date)
+    os.makedirs(logs_dir, exist_ok=True)
     print('Train validation split')
     start_time = time.time()
     train_file_path = args.input_parquet
