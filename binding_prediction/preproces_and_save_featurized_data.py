@@ -24,7 +24,8 @@ def parse_args():
 
 
 def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
-                      circular_fingerprint_radius, circular_fingerprint_length):
+                      circular_fingerprint_radius, circular_fingerprint_length,
+                      train_set = True):
     if os.path.exists(os.path.join(output_dir, f'Commit_file.txt')):
         return protein_map
     print(f"Processing row group {row_group_number}")
@@ -47,7 +48,10 @@ def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
     print(f"Fingerprinting time: {time.time() - start_time}")
     start_time = time.time()
     x = np.array([x[i] + [proteins_encoded[i]] for i in range(len(x))])
-    y = np.array(row_group_df[TARGET_COLUMN])
+    if train_set:
+        y = np.array(row_group_df[TARGET_COLUMN])
+    else:
+        y = np.array([-1] * len(x))
     print(f"Combining time: {time.time() - start_time}")
     start_time = time.time()
     np.save(os.path.join(output_dir, f'x_{row_group_number}.npy'), x)
@@ -81,7 +85,7 @@ def main():
         print(f"Processing row group {i}")
         start_time = time.time()
         protein_map = process_row_group(parquet_file_path, i, output_dir, protein_map, args.circular_fingerprint_radius,
-                                        args.circular_fingerprint_length)
+                                        args.circular_fingerprint_length, train_set = args.train_set)
         print(f"Total time: {time.time() - start_time}")
 
     np.save(os.path.join(output_dir, 'protein_map.npy'), protein_map)
