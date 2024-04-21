@@ -1,0 +1,17 @@
+name: binding_prediction
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pandas=2.2.1
+  - nb_conda_kernels=2.3
+  - conda-forge::pyarrow=14.0.2
+  - conda-forge::rdkit=2023.03.3
+  - pip:
+      - matplotlib==3.8.4
+      - seaborn==0.13.2
+      - tqdm==4.66.2
+      - xgboost==2.0.3
+      - scikit-learn==1.4.2
