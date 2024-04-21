@@ -25,8 +25,9 @@ def parse_args():
 
 def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
                       circular_fingerprint_radius, circular_fingerprint_length,
-                      train_set = True):
+                      train_set=True):
     if os.path.exists(os.path.join(output_dir, f'Commit_file.txt')):
+        protein_map = np.load(os.path.join(output_dir, 'protein_map.npy'), allow_pickle=True).item()
         return protein_map
     print(f"Processing row group {row_group_number}")
     start_time = time.time()
