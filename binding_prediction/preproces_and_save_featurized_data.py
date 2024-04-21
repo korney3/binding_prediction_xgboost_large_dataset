@@ -26,7 +26,7 @@ def parse_args():
 def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
                       circular_fingerprint_radius, circular_fingerprint_length,
                       train_set=True):
-    if os.path.exists(os.path.join(output_dir, f'Commit_file.txt')):
+    if os.path.exists(os.path.join(output_dir, f'Commit_file_{row_group_number}.txt')):
         protein_map = np.load(os.path.join(output_dir, 'protein_map.npy'), allow_pickle=True).item()
         return protein_map
     print(f"Processing row group {row_group_number}")
@@ -58,10 +58,10 @@ def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
     np.save(os.path.join(output_dir, f'x_{row_group_number}.npy'), x)
     np.save(os.path.join(output_dir, f'input_smiles_{row_group_number}.npy'), input_smiles)
     np.save(os.path.join(output_dir, f'y_{row_group_number}.npy'), y)
-    with open(os.path.join(output_dir, f'Commit_file.txt'), 'w') as f:
+    with open(os.path.join(output_dir, f'Commit_file_{row_group_number}.txt'), 'w') as f:
         f.write('Commit')
     print(f"Saving time: {time.time() - start_time}")
-
+    np.save(os.path.join(output_dir, 'protein_map.npy'), protein_map)
     return protein_map
 
 
@@ -89,7 +89,7 @@ def main():
                                         args.circular_fingerprint_length, train_set = args.train_set)
         print(f"Total time: {time.time() - start_time}")
 
-    np.save(os.path.join(output_dir, 'protein_map.npy'), protein_map)
+
 
 
 if __name__ == '__main__':
