@@ -66,11 +66,12 @@ def main():
     start_time = time.time()
     params = {
         'max_depth': 20,
-        'objective': 'binary:logistic',
-        'eval_metric': 'auc',
+        'objective': 'rank:map',
+        'eval_metric': 'map',
         'verbosity': 2,
         'nthread': 12,
-        "tree_method": "hist"
+        "tree_method": "hist",
+        "grow_policy": 'depthwise'
     }
     with open(os.path.join(logs_dir, 'params.json'), 'w') as file:
         json.dump(params, file)
@@ -82,8 +83,8 @@ def main():
     start_time = time.time()
     model = xgboost.train(params, train_Xy, num_rounds,
                           evals=eval_list, verbose_eval=True,
-                          early_stopping_rounds=5,
-                          grow_policy='depthwise')
+                          early_stopping_rounds=5
+                          )
     print(f"Training model time: {time.time() - start_time}")
     print('Saving model')
     start_time = time.time()
