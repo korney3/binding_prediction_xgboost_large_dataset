@@ -65,8 +65,8 @@ def main():
     print('Creating model')
     start_time = time.time()
     params = {
-        'max_depth': 20,
-        'objective': 'rank:map',
+        'max_depth': 50,
+        'objective': 'binary:logistic',
         'eval_metric': 'map',
         'verbosity': 2,
         'nthread': 12,
@@ -75,7 +75,7 @@ def main():
     }
     with open(os.path.join(logs_dir, 'params.json'), 'w') as file:
         json.dump(params, file)
-    num_rounds = 50
+    num_rounds = 300
 
     eval_list = [(train_Xy, 'train'), (val_Xy, 'eval')]
     print(f"Creating model time: {time.time() - start_time}")
