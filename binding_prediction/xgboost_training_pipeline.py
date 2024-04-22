@@ -5,6 +5,7 @@ import pickle
 import time
 
 import numpy as np
+import pandas as pd
 import pyarrow.parquet as pq
 import xgboost
 
@@ -14,6 +15,7 @@ from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_parquet', type=str, default='data/two_row_groups.parquet')
+    parser.add_argument('--test_parquet', type=str, default='data/test.parquet')
     parser.add_argument('--featurizer', type=str, default='circular')
     parser.add_argument('--circular_fingerprint_radius', type=int, default=3)
     parser.add_argument('--circular_fingerprint_length', type=int, default=2048)
@@ -33,12 +35,14 @@ def main():
     train_val_pq = pq.ParquetFile(train_file_path)
 
     if args.debug:
-        train_size = 1000
+        train_size = 100000
     else:
         train_size = train_val_pq.metadata.num_rows
-
-    train_indices = rng.choice(train_size, int(0.8 * train_size), replace=False)
-    val_indices = np.setdiff1d(np.arange(train_size), train_indices)
+    train_val_indices = rng.choice(train_val_pq.metadata.num_rows,
+                                   train_size,
+                                   replace=False)
+    train_indices = rng.choice(train_val_indices, int(0.8 * train_size), replace=False)
+    val_indices = np.setdiff1d(train_val_indices, train_indices)
     print(f"Train validation split time: {time.time() - start_time}")
 
     print('Creating datasets')
@@ -61,7 +65,7 @@ def main():
     print('Creating model')
     start_time = time.time()
     params = {
-        'max_depth': 10,
+        'max_depth': 20,
         'objective': 'binary:logistic',
         'eval_metric': 'auc',
         'verbosity': 2,
@@ -69,7 +73,7 @@ def main():
     }
     with open(os.path.join(logs_dir, 'params.json'), 'w') as file:
         json.dump(params, file)
-    num_rounds = 10
+    num_rounds = 50
 
     eval_list = [(train_Xy, 'train'), (val_Xy, 'eval')]
     print(f"Creating model time: {time.time() - start_time}")
@@ -84,6 +88,31 @@ def main():
     with open(os.path.join(logs_dir, 'model.pkl'), 'wb') as file:
         pickle.dump(model, file)
     print(f"Saving model time: {time.time() - start_time}")
+
+    print('Testing model')
+    start_time = time.time()
+    test_dataset = SmilesIterator(args.test_parquet, test_set=True,
+                                  shuffle=False,
+                                  fingerprint=args.featurizer,
+                                  radius=args.circular_fingerprint_radius,
+                                  nBits=args.circular_fingerprint_length)
+    test_Xy = xgboost.DMatrix(test_dataset)
+    test_pred = model.predict(test_Xy)
+    submission = pd.DataFrame(columns=['id', 'binds'])
+    print(f"Testing model time: {time.time() - start_time}")
+    print('Saving predictions')
+    test_pq = pq.ParquetFile(args.test_parquet)
+    for group_id in range(test_pq.metadata.num_row_groups):
+        group_df = test_pq.read_row_group(group_id).to_pandas()
+        submission = pd.concat([submission,
+                                pd.DataFrame({
+                                    'id': group_df['id'],
+                                    'binds':
+                                        test_pred[group_id * test_dataset._shard_size:
+                                                  (group_id + 1) * test_dataset._shard_size]})])
+
+    submission.to_csv(os.path.join(logs_dir, 'submission.csv'), index=False)
+    print('Done')
 
 
 if __name__ == '__main__':
