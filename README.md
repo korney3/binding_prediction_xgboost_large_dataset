@@ -19,3 +19,16 @@ python binding_prediction/preproces_and_save_featurized_data.py --input_parquet 
 # Test set
 python binding_prediction/preproces_and_save_featurized_data.py --input_parquet data/test.parquet --train_set 0
 ```
+
+# XGBoost model baseline
+
+
+## Run model in debug regime
+```bash
+python binding_prediction/train_model.py --input_parquet data/row_group_0.parquet --debug
+```
+
+## Train xgboost baseline model
+```bash
+python binding_prediction/train_xgboost.py
+```
