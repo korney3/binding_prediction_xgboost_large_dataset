@@ -65,7 +65,7 @@ def main():
     print('Creating model')
     start_time = time.time()
     params = {
-        'max_depth': 50,
+        'max_depth': 25,
         'objective': 'binary:logistic',
         'eval_metric': 'map',
         'verbosity': 2,
@@ -75,16 +75,19 @@ def main():
     }
     with open(os.path.join(logs_dir, 'params.json'), 'w') as file:
         json.dump(params, file)
-    num_rounds = 300
+    num_rounds = 100
 
     eval_list = [(train_Xy, 'train'), (val_Xy, 'eval')]
     print(f"Creating model time: {time.time() - start_time}")
     print('Training model')
     start_time = time.time()
-    model = xgboost.train(params, train_Xy, num_rounds,
-                          evals=eval_list, verbose_eval=True,
-                          early_stopping_rounds=5
-                          )
+    try:
+        model = xgboost.train(params, train_Xy, num_rounds,
+                              evals=eval_list, verbose_eval=True,
+                              early_stopping_rounds=5
+                              )
+    except KeyboardInterrupt:
+        print('Training interrupted')
     print(f"Training model time: {time.time() - start_time}")
     print('Saving model')
     start_time = time.time()
