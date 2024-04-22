@@ -101,7 +101,8 @@ def main():
                                   nBits=args.circular_fingerprint_length)
     test_Xy = xgboost.DMatrix(test_dataset)
     print(f"Load test data: {time.time() - start_time}")
-    get_submission_test_predictions(test_dataset, test_Xy, model, start_time, logs_dir, args)
+    get_submission_test_predictions(test_dataset, test_Xy,
+                                    model, logs_dir)
     print('Done')
 
 
