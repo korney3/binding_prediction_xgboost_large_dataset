@@ -5,11 +5,11 @@ import pickle
 import time
 
 import numpy as np
-import pandas as pd
 import pyarrow.parquet as pq
 import xgboost
 
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
+from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions
 
 
 def parse_args():
@@ -69,7 +69,8 @@ def main():
         'objective': 'binary:logistic',
         'eval_metric': 'auc',
         'verbosity': 2,
-        'nthread': 12
+        'nthread': 12,
+        "tree_method": "hist"
     }
     with open(os.path.join(logs_dir, 'params.json'), 'w') as file:
         json.dump(params, file)
@@ -81,7 +82,8 @@ def main():
     start_time = time.time()
     model = xgboost.train(params, train_Xy, num_rounds,
                           evals=eval_list, verbose_eval=True,
-                          early_stopping_rounds=5)
+                          early_stopping_rounds=5,
+                          grow_policy='depthwise')
     print(f"Training model time: {time.time() - start_time}")
     print('Saving model')
     start_time = time.time()
@@ -97,21 +99,8 @@ def main():
                                   radius=args.circular_fingerprint_radius,
                                   nBits=args.circular_fingerprint_length)
     test_Xy = xgboost.DMatrix(test_dataset)
-    test_pred = model.predict(test_Xy)
-    submission = pd.DataFrame(columns=['id', 'binds'])
-    print(f"Testing model time: {time.time() - start_time}")
-    print('Saving predictions')
-    test_pq = pq.ParquetFile(args.test_parquet)
-    for group_id in range(test_pq.metadata.num_row_groups):
-        group_df = test_pq.read_row_group(group_id).to_pandas()
-        submission = pd.concat([submission,
-                                pd.DataFrame({
-                                    'id': group_df['id'],
-                                    'binds':
-                                        test_pred[group_id * test_dataset._shard_size:
-                                                  (group_id + 1) * test_dataset._shard_size]})])
-
-    submission.to_csv(os.path.join(logs_dir, 'submission.csv'), index=False)
+    print(f"Load test data: {time.time() - start_time}")
+    get_submission_test_predictions(test_dataset, test_Xy, model, start_time, logs_dir, args)
     print('Done')
 
 

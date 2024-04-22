@@ -27,10 +27,10 @@ class SmilesIterator(xgboost.DataIter):
                  radius=2,
                  nBits=2048):
         self._file_path = file_path
-        self._parquet_file = pq.ParquetFile(file_path)
-        self._dataset_length = self._parquet_file.metadata.num_rows
-        self._num_shards = self._parquet_file.metadata.num_row_groups
-        self._shard_size = self._dataset_length // self._num_shards
+        self.parquet_file = pq.ParquetFile(file_path)
+        self._dataset_length = self.parquet_file.metadata.num_rows
+        self._num_shards = self.parquet_file.metadata.num_row_groups
+        self.shard_size = self.parquet_file.metadata.row_group(0).num_rows
         self._shuffle = shuffle
         if indicies is not None:
             self._shuffled_indices = indicies
@@ -55,9 +55,9 @@ class SmilesIterator(xgboost.DataIter):
         start_time = time.time()
 
         indicies_in_shard = np.array(self._shuffled_indices[np.where(
-            (self._shuffled_indices >= self._it * self._shard_size) & (
-                    self._shuffled_indices < (self._it + 1) * self._shard_size))])
-        relative_indicies = indicies_in_shard - self._it * self._shard_size
+            (self._shuffled_indices >= self._it * self.shard_size) & (
+                    self._shuffled_indices < (self._it + 1) * self.shard_size))])
+        relative_indicies = indicies_in_shard - self._it * self.shard_size
 
         if os.path.exists(os.path.join(self._cache_path, f"Commit_file_{self._it}.txt")):
             start_time = time.time()
@@ -68,7 +68,7 @@ class SmilesIterator(xgboost.DataIter):
             self._it += 1
             return 1
 
-        row_group_df = self._parquet_file.read_row_group(self._it).to_pandas()
+        row_group_df = self.parquet_file.read_row_group(self._it).to_pandas()
 
         row_group_df = row_group_df.iloc[relative_indicies]
         print("Reading time", time.time() - start_time)
