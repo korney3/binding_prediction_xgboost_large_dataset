@@ -27,6 +27,7 @@ class SmilesIterator(xgboost.DataIter):
                  radius=2,
                  nBits=2048):
         self._file_path = file_path
+        self._parquet_filename = os.path.basename(file_path)
         self.parquet_file = pq.ParquetFile(file_path)
         self._dataset_length = self.parquet_file.metadata.num_rows
         self._num_shards = self.parquet_file.metadata.num_row_groups
@@ -40,10 +41,7 @@ class SmilesIterator(xgboost.DataIter):
             self._shuffled_indices = np.random.permutation(self._shuffled_indices)
 
         self._protein_map = {}
-        if test_set:
-            self._cache_path = os.path.join("data/processed", f"{fingerprint}_{radius}_{nBits}/test")
-        else:
-            self._cache_path = os.path.join("data/processed", f"{fingerprint}_{radius}_{nBits}/train")
+        self._cache_path = os.path.join("data/processed",self._parquet_filename, f"{fingerprint}_{radius}_{nBits}")
         self._it = 0
         self._temporary_data = None
         super().__init__(cache_prefix=os.path.join(".", "cache"))

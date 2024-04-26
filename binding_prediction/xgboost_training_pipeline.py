@@ -41,7 +41,7 @@ def main():
     train_val_indices = rng.choice(train_val_pq.metadata.num_rows,
                                    train_size,
                                    replace=False)
-    train_indices = rng.choice(train_val_indices, int(0.8 * train_size), replace=False)
+    train_indices = rng.choice(train_val_indices, int(0.5 * train_size), replace=False)
     val_indices = np.setdiff1d(train_val_indices, train_indices)
     print(f"Train validation split time: {time.time() - start_time}")
 
@@ -65,7 +65,7 @@ def main():
     print('Creating model')
     start_time = time.time()
     params = {
-        'max_depth': 25,
+        'max_depth': 10,
         'objective': 'binary:logistic',
         'eval_metric': 'map',
         'verbosity': 2,
