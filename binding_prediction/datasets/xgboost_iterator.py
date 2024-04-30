@@ -64,7 +64,6 @@ class SmilesIterator(xgboost.DataIter):
                                                                             self._protein_map,
                                                                             self._radius,
                                                                             self._fingerprint_length)
-
         x = x[relative_indicies]
         y = y[relative_indicies]
         print("Fingerprinting time", time.time() - start_time)
@@ -72,6 +71,7 @@ class SmilesIterator(xgboost.DataIter):
         start_time = time.time()
         input_data(data=x, label=y)
         print("Inputting time", time.time() - start_time)
+        self._it += 1
         return 1
 
     def reset(self):
