@@ -10,6 +10,7 @@ import xgboost
 
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions
+from binding_prediction.models.xgboost_model import XGBoostModel
 
 
 def parse_args():
@@ -97,21 +98,19 @@ def main():
     num_rounds = 100
 
     eval_list = [(train_Xy, 'train'), (val_Xy, 'eval')]
+
+    model = XGBoostModel(params, num_rounds)
     print(f"Creating model time: {time.time() - start_time}")
+
     print('Training model')
     start_time = time.time()
-    try:
-        model = xgboost.train(params, train_Xy, num_rounds,
-                              evals=eval_list, verbose_eval=True,
-                              early_stopping_rounds=5
-                              )
-    except KeyboardInterrupt:
-        print('Training interrupted')
+
+    model.train(train_Xy, eval_list)
     print(f"Training model time: {time.time() - start_time}")
+
     print('Saving model')
     start_time = time.time()
-    with open(os.path.join(logs_dir, 'model.pkl'), 'wb') as file:
-        pickle.dump(model, file)
+    model.save(os.path.join(logs_dir, 'model.pkl'))
     print(f"Saving model time: {time.time() - start_time}")
 
     print('Testing model')
