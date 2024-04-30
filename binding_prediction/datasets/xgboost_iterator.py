@@ -34,15 +34,12 @@ class SmilesIterator(xgboost.DataIter):
             self._shuffled_indices = np.random.permutation(self._shuffled_indices)
         self._cache_path = os.path.join("data/processed", self._parquet_filename,
                                         f"{fingerprint}_{self._radius}_{self._fingerprint_length}")
+        os.makedirs(self._cache_path, exist_ok=True)
         if protein_map_path is not None:
             self.protein_map_path = protein_map_path
-            self._protein_map = np.load(protein_map_path, allow_pickle=True).item()
         else:
             self.protein_map_path = os.path.join(self._cache_path, "protein_map.npy")
-            if os.path.exists(self.protein_map_path):
-                self._protein_map = np.load(self.protein_map_path, allow_pickle=True).item()
-            else:
-                self._protein_map = {}
+        self._protein_map = {}
         self._it = 0
         self._temporary_data = None
         super().__init__(cache_prefix=os.path.join(".", "cache"))
@@ -53,6 +50,8 @@ class SmilesIterator(xgboost.DataIter):
                 np.save(f, self._protein_map)
             return 0
         print("Reading row group", self._it)
+        if os.path.exists(self.protein_map_path):
+            self._protein_map = np.load(self.protein_map_path, allow_pickle=True).item()
         start_time = time.time()
 
         indicies_in_shard = np.array(self._shuffled_indices[np.where(
