@@ -63,16 +63,8 @@ def main():
                                  fingerprint=args.featurizer,
                                  radius=args.circular_fingerprint_radius,
                                  nBits=args.circular_fingerprint_length)
-    if os.path.exists(os.path.join(train_dataset._cache_path, 'train_Xy.bin')):
-        train_Xy = xgboost.DMatrix(os.path.join(train_dataset._cache_path, 'train_Xy.bin'))
-    else:
-        train_Xy = xgboost.DMatrix(train_dataset)
-        train_Xy.save_binary(os.path.join(train_dataset._cache_path, 'train_Xy.bin'))
-    if os.path.exists(os.path.join(val_dataset._cache_path, 'val_Xy.bin')):
-        val_Xy = xgboost.DMatrix(os.path.join(val_dataset._cache_path, 'val_Xy.bin'))
-    else:
-        val_Xy = xgboost.DMatrix(val_dataset)
-        val_Xy.save_binary(os.path.join(val_dataset._cache_path, 'val_Xy.bin'))
+    train_Xy = xgboost.DMatrix(train_dataset)
+    val_Xy = xgboost.DMatrix(val_dataset)
 
     print(f"Creating datasets time: {time.time() - start_time}")
     print(f"Datasets sizes: train: {train_Xy.num_row()}, "
