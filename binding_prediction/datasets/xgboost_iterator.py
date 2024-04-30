@@ -6,7 +6,7 @@ import numpy as np
 import pyarrow.parquet as pq
 import xgboost
 
-from binding_prediction.preproces_and_save_featurized_data import create_circular_fingerprints_from_pq_row_group
+from binding_prediction.data_processing.circular_fingerprints import create_circular_fingerprints_from_pq_row_group
 
 
 class SmilesIterator(xgboost.DataIter):
