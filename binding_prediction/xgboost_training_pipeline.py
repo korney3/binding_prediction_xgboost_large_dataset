@@ -62,7 +62,8 @@ def main():
     val_dataset = SmilesIterator(train_file_path, indicies=val_indices,
                                  fingerprint=args.featurizer,
                                  radius=args.circular_fingerprint_radius,
-                                 nBits=args.circular_fingerprint_length)
+                                 nBits=args.circular_fingerprint_length,
+                                 protein_map_path=train_dataset.protein_map_path)
     train_Xy = xgboost.DMatrix(train_dataset)
     val_Xy = xgboost.DMatrix(val_dataset)
 
@@ -110,7 +111,8 @@ def main():
     test_dataset = SmilesIterator(args.test_parquet, shuffle=False,
                                   fingerprint=args.featurizer,
                                   radius=args.circular_fingerprint_radius,
-                                  nBits=args.circular_fingerprint_length)
+                                  nBits=args.circular_fingerprint_length,
+                                  protein_map_path=train_dataset.protein_map_path)
     test_Xy = xgboost.DMatrix(test_dataset)
     print(f"Load test data: {time.time() - start_time}")
     get_submission_test_predictions(test_dataset, test_Xy,
