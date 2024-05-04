@@ -15,7 +15,20 @@ Get the data from the [Kaggle competition page](https://www.kaggle.com/competiti
 # Featurize data
 ```bash
 # Train set
-python binding_prediction/preproces_and_save_featurized_data.py --input_parquet data/train.parquet --train_set 1
+python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/train.parquet
 # Test set
-python binding_prediction/preproces_and_save_featurized_data.py --input_parquet data/test.parquet --train_set 0
+python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/test.parquet
+```
+
+# XGBoost model baseline
+
+
+## Run model in debug regime
+```bash
+python binding_prediction/xgboost_training_pipeline.py --input_parquet data/row_group_0.parquet --debug
+```
+
+## Train xgboost baseline model
+```bash
+python binding_prediction/xgboost_training_pipeline.py
 ```
