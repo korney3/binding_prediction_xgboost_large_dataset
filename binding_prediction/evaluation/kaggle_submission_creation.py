@@ -4,7 +4,7 @@ import time
 import pandas as pd
 
 
-def get_submission_test_predictions(test_dataset, test_Xy, model, logs_dir):
+def get_submission_test_predictions_for_xgboost_model(test_dataset, test_Xy, model, logs_dir):
     start_time = time.time()
     test_pred = model.predict(test_Xy)
     submission = pd.DataFrame(columns=['id', 'binds'])

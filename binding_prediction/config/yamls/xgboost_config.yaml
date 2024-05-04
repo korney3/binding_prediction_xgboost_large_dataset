@@ -1,0 +1,18 @@
+model:
+  name: 'xgboost'
+  max_depth: 15
+  objective: 'binary:logistic'
+  eval_metric: 'map'
+  verbosity: 2
+  nthread: 12
+  tree_method: "hist"
+  grow_policy: 'depthwise'
+  subsample: 0.5
+  colsample_bytree: 0.8
+  num_boost_round: 100
+train:
+  early_stopping_rounds: 5
+featurizer:
+  name: 'circular_fingerprint'
+  radius: 3
+  length: 2048

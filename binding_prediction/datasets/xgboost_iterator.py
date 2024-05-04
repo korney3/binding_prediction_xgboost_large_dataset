@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 import xgboost
 
 from binding_prediction.data_processing.circular_fingerprints import create_circular_fingerprints_from_pq_row_group
+from binding_prediction.utils import FeaturizerTypes
 
 
 class SmilesIterator(xgboost.DataIter):
@@ -26,6 +27,7 @@ class SmilesIterator(xgboost.DataIter):
         self._shuffle = shuffle
         self._radius = radius
         self._fingerprint_length = nBits
+        self._fingerprint = fingerprint
         if indicies is not None:
             self._shuffled_indices = indicies
         else:
@@ -33,7 +35,7 @@ class SmilesIterator(xgboost.DataIter):
         if shuffle:
             self._shuffled_indices = np.random.permutation(self._shuffled_indices)
         self._cache_path = os.path.join("data/processed", self._parquet_filename,
-                                        f"{fingerprint}_{self._radius}_{self._fingerprint_length}")
+                                        f"{self._fingerprint}_{self._radius}_{self._fingerprint_length}")
         os.makedirs(self._cache_path, exist_ok=True)
         if protein_map_path is not None:
             self.protein_map_path = protein_map_path
@@ -67,10 +69,15 @@ class SmilesIterator(xgboost.DataIter):
             print("Reading time", time.time() - start_time)
             self._it += 1
             return 1
-        input_smiles, x, y = create_circular_fingerprints_from_pq_row_group(self._file_path, self._it,
-                                                                            self._protein_map,
-                                                                            self._radius,
-                                                                            self._fingerprint_length)
+
+        if self._fingerprint == FeaturizerTypes.CIRCULAR:
+            input_smiles, x, y = create_circular_fingerprints_from_pq_row_group(self._file_path, self._it,
+                                                                                self._protein_map,
+                                                                                self._radius,
+                                                                                self._fingerprint_length)
+        else:
+            raise NotImplementedError(f"Fingerprint {self._fingerprint} is not implemented")
+
         x = x[relative_indicies]
         y = y[relative_indicies]
         print("Fingerprinting time", time.time() - start_time)

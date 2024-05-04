@@ -1,8 +1,10 @@
 # Prediction of Protein Binding - Kaggle Competition "Leash Bio - Predict New Medicines with BELKA"
 
-Kaggle competition page: [Leash Bio - Predict New Medicines with BELKA](https://www.kaggle.com/competitions/leash-BELKA/overview)
+Kaggle competition
+page: [Leash Bio - Predict New Medicines with BELKA](https://www.kaggle.com/competitions/leash-BELKA/overview)
 
 # Installation
+
 ```bash
 conda env create -f environment.yml
 conda activate binding_prediction
@@ -10,26 +12,31 @@ pip install -e .
 ```
 
 # Download data
-Get the data from the [Kaggle competition page](https://www.kaggle.com/competitions/leash-BELKA/data) and save it in the `data` folder.
 
-# Featurize data
-```bash
-# Train set
-python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/train.parquet
-# Test set
-python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/test.parquet
-```
+Get the data from the [Kaggle competition page](https://www.kaggle.com/competitions/leash-BELKA/data) and save it in
+the `data` folder.
 
 # XGBoost model baseline
 
 Best test MAP score - 0.390
 
-## Run model in debug regime
+## Train xgboost baseline model
+
 ```bash
-python binding_prediction/xgboost_training_pipeline.py --input_parquet data/row_group_0.parquet --debug
+python binding_prediction/xgboost_training_pipeline.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \
+                                                       --test_parquet PATH_TO_INPUT_TEST_PARQUET_FILE \
+                                                       --config_path PATH_TO_YAML_WITH_CONFIG
 ```
 
-## Train xgboost baseline model
+If You want to run it in debug mode, add `--debug` flag.
+
+# Featurize data with circular fingerprints and store cached np arrays
+
+This is outdated and not used anymore
+
 ```bash
-python binding_prediction/xgboost_training_pipeline.py
+# Train set
+python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/train.parquet
+# Test set
+python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/test.parquet
 ```
