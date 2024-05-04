@@ -22,6 +22,7 @@ python binding_prediction/preproces_and_save_circular_featurized_data.py --input
 
 # XGBoost model baseline
 
+Best test MAP score - 0.390
 
 ## Run model in debug regime
 ```bash

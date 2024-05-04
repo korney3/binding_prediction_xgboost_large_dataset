@@ -2,3 +2,4 @@
 /binding_prediction.egg-info/
 /.idea/
 cache-*
+.tmp
