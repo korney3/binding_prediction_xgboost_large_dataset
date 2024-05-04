@@ -17,6 +17,8 @@ class TrainingPipeline:
                  debug: bool = False,
                  rng: np.random.Generator = np.random.default_rng(seed=42)):
         self.config = config
+        self.save_config()
+
         self.debug = debug
         self.rng = rng
 
