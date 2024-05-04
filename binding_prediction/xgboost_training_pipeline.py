@@ -73,8 +73,8 @@ def main():
     print('Creating model')
     start_time = time.time()
     params = {
-        'eta': 0.1,
-        'gamma': 0.1,
+        # 'eta': 0.1,
+        # 'gamma': 0.1,
         'max_depth': 15,
         'objective': 'binary:logistic',
         'eval_metric': 'map',
@@ -82,7 +82,7 @@ def main():
         'nthread': 12,
         "tree_method": "hist",
         "grow_policy": 'depthwise',
-        'subsample': 0.8,
+        'subsample': 0.5,
         'colsample_bytree': 0.8,
         'scale_pos_weight': neg_samples / pos_samples,
     }
