@@ -2,15 +2,15 @@ import pickle
 
 import xgboost
 
-from binding_prediction.config.config_creation import Config
 from binding_prediction.models.base_model import Model
 
 
-class XGBoostModel(Model):
-    def __init__(self, config: Config):
+class XGBoostEnsembleModel(Model):
+    def __init__(self, config, num_pq_groups_per_model=4):
         super().__init__(config)
+        self.num_pq_groups_per_model = num_pq_groups_per_model
 
-    def train(self, train_Xy, eval_list):
+    def train(self, train_indicies, val_indicies):
         params = self.config.model_config.__dict__
         num_rounds = params.pop('num_boost_round')
         early_stopping_rounds = self.config.training_config.early_stopping_rounds

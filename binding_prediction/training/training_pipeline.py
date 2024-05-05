@@ -5,7 +5,7 @@ import pyarrow.parquet as pq
 import xgboost
 import yaml
 
-from binding_prediction.config.config import Config
+from binding_prediction.config.config_creation import Config
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
@@ -63,14 +63,32 @@ class TrainingPipeline:
         pretty_print_text("Preparing train and validation data")
         train_val_pq = pq.ParquetFile(self.config.train_file_path)
         if self.debug:
-            train_size = 100000
+            train_size = 50000
+            print(f"DEBUG MODE: Using only {train_size} samples for training")
+            train_val_indices = self.rng.choice(train_val_pq.metadata.num_rows,
+                                                train_size,
+                                                replace=False)
         else:
-            train_size = train_val_pq.metadata.num_rows
+            if self.config.training_config.pq_groups_numbers is not None:
+                train_size = 0
+                train_val_indices = []
+                for group_number in self.config.training_config.pq_groups_numbers:
+                    train_size += train_val_pq.metadata.row_group(group_number).num_rows
+                    start_index = train_val_pq.metadata.row_group(0).num_rows * group_number
+                    train_val_indices.extend(
+                        range(start_index, start_index + train_val_pq.metadata.row_group(group_number).num_rows))
+            else:
+                train_size = train_val_pq.metadata.num_rows
+                train_val_indices = self.rng.choice(train_val_pq.metadata.num_rows,
+                                                    train_size,
+                                                    replace=False)
 
-        train_indices, val_indices = self.get_train_val_indicies(train_val_pq, train_size)
+        train_indices, val_indices = self.get_train_val_indices(train_val_indices)
+        self.save_train_val_indices(train_indices, val_indices)
 
         if self.config.model_config.name == ModelTypes.XGBOOST:
             train_dataset = SmilesIterator(self.config.train_file_path, indicies=train_indices,
+                                           pq_row_group_numbers=self.config.training_config.pq_groups_numbers,
                                            fingerprint=self.config.featurizer_config.name,
                                            radius=self.config.featurizer_config.radius,
                                            nBits=self.config.featurizer_config.length)
@@ -78,6 +96,7 @@ class TrainingPipeline:
             self.config.protein_map_path = train_dataset.protein_map_path
 
             val_dataset = SmilesIterator(self.config.train_file_path, indicies=val_indices,
+                                         pq_row_group_numbers=self.config.training_config.pq_groups_numbers,
                                          fingerprint=self.config.featurizer_config.name,
                                          radius=self.config.featurizer_config.radius,
                                          nBits=self.config.featurizer_config.length,
@@ -103,10 +122,14 @@ class TrainingPipeline:
         else:
             raise ValueError(f"Model type {self.config.model_config.name} is not supported")
 
-    def get_train_val_indicies(self, train_val_pq, train_size):
-        train_val_indices = self.rng.choice(train_val_pq.metadata.num_rows,
-                                            train_size,
-                                            replace=False)
+    def get_train_val_indices(self, train_val_indices):
+        train_size = len(train_val_indices)
         train_indices = self.rng.choice(train_val_indices, int(0.5 * train_size), replace=False)
         val_indices = np.setdiff1d(train_val_indices, train_indices)
         return train_indices, val_indices
+
+    def save_train_val_indices(self, train_indices, val_indices):
+        with open(os.path.join(self.config.logs_dir, 'train_indices.npy'), 'wb') as f:
+            np.save(f, train_indices)
+        with open(os.path.join(self.config.logs_dir, 'val_indices.npy'), 'wb') as f:
+            np.save(f, val_indices)

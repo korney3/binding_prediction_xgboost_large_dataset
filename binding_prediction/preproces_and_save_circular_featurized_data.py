@@ -13,7 +13,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_parquet', type=str, default='data/two_row_groups.parquet')
     parser.add_argument('--output_dir', type=str, default='data/processed')
-    parser.add_argument('--protein_map_path', type=str, default='data/processed/circular_3_2048/train/protein_map.npy')
+    parser.add_argument('--protein_map_path', type=str, default='data/processed/circular_3_2048/train/protein_map.json')
     parser.add_argument('--circular_fingerprint_radius', type=int, default=3)
     parser.add_argument('--circular_fingerprint_length', type=int, default=2048)
     return parser.parse_args()
