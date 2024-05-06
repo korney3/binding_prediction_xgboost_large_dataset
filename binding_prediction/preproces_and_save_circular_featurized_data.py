@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import time
 
@@ -27,8 +28,8 @@ def main():
     if args.protein_map_path is None:
         protein_map = {}
     else:
-        protein_map = np.load(args.protein_map_path,
-                              allow_pickle=True).item()
+        with open(args.protein_map_path, 'r') as f:
+            protein_map = json.load(f)
     output_dir = os.path.join(args.output_dir, parquet_file_name, subdirectory)
     os.makedirs(output_dir, exist_ok=True)
     num_row_groups = pq.ParquetFile(parquet_file_path).metadata.num_row_groups

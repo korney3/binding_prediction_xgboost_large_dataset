@@ -15,9 +15,14 @@ class XGBoostModel(Model):
         num_rounds = params.pop('num_boost_round')
         early_stopping_rounds = self.config.training_config.early_stopping_rounds
 
+        check_point = xgboost.callback.TrainingCheckPoint(directory=self.config.logs_dir,
+                                                          iterations=3,
+                                                          name='model', as_pickle=True)
+
         self.model = xgboost.train(params, train_Xy, num_rounds,
                                    evals=eval_list, verbose_eval=True,
-                                   early_stopping_rounds=early_stopping_rounds)
+                                   early_stopping_rounds=early_stopping_rounds,
+                                   callbacks=[check_point])
 
     def save(self, path):
         with open(path, 'wb') as file:

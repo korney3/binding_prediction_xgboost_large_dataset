@@ -60,7 +60,8 @@ class SmilesIterator(xgboost.DataIter):
             return 0
 
         if os.path.exists(self.protein_map_path):
-            self._protein_map = np.load(self.protein_map_path, allow_pickle=True).item()
+            with open(self.protein_map_path, "r") as f:
+                self._protein_map = json.load(f)
         start_time = time.time()
 
         current_index = self._it

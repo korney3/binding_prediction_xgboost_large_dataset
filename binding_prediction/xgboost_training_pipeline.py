@@ -33,7 +33,7 @@ def main():
 
     with open(args.config_path, 'r') as file:
         train_config_dict = yaml.safe_load(file)["train"]
-    if train_config_dict["pq_groups_numbers"] is not None:
+    if "pq_groups_numbers" in train_config_dict and train_config_dict["pq_groups_numbers"] is not None:
         pq_groups_numbers = sorted(train_config_dict["pq_groups_numbers"])
     else:
         pq_groups_numbers = None

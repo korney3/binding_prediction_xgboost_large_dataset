@@ -6,6 +6,7 @@ import xgboost
 import yaml
 
 from binding_prediction.config.config_creation import Config
+from binding_prediction.const import TARGET_COLUMN
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
@@ -84,6 +85,20 @@ class TrainingPipeline:
                                                     replace=False)
 
         train_indices, val_indices = self.get_train_val_indices(train_val_indices)
+
+        if (0 <
+                self.config.training_config.target_scale_pos_weight <
+                self.config.neg_samples / self.config.pos_samples):
+            pretty_print_text("Adding positive samples to training set")
+            pos_samples_indices = self.sample_positive_indexes_to_add_to_train(train_val_pq, train_indices,
+                                                                               val_indices)
+            print(f"Got {len(pos_samples_indices)} indices")
+            train_indices = np.concatenate([train_indices, pos_samples_indices])
+            train_indices = self.rng.permutation(train_indices)
+
+            self.config.pos_samples += len(pos_samples_indices)
+            self.config.model_config.scale_pos_weight = self.config.neg_samples / self.config.pos_samples
+
         self.save_train_val_indices(train_indices, val_indices)
 
         if self.config.model_config.name == ModelTypes.XGBOOST:
@@ -108,6 +123,28 @@ class TrainingPipeline:
             return train_Xy, val_Xy
         else:
             raise ValueError(f"Model type {self.config.model_config.name} is not supported")
+
+    def sample_positive_indexes_to_add_to_train(self, train_val_pq, train_indices, val_indices):
+        pos_samples_indexes = []
+        group_size = train_val_pq.metadata.row_group(0).num_rows
+        last_index = 0
+        for group_number in range(train_val_pq.num_row_groups):
+            row_group = train_val_pq.read_row_group(group_number).to_pandas()
+            pos_samples_indexes.extend([x+last_index for x in row_group[row_group[TARGET_COLUMN] == 1].index])
+            last_index += group_size
+        pos_samples_indexes = np.array(pos_samples_indexes)
+        print(f"Got {len(pos_samples_indexes)} positive samples")
+        pos_samples_to_sample = int(
+            self.config.neg_samples / self.config.training_config.target_scale_pos_weight - self.config.pos_samples)
+        print(f"Sampling {pos_samples_to_sample} positive samples")
+        pos_samples = self.rng.choice(pos_samples_indexes, pos_samples_to_sample, replace=False)
+        pos_samples_not_in_val = np.setdiff1d(pos_samples, val_indices)
+        print(f"Got {len(pos_samples_not_in_val)} positive samples not in validation set")
+        pos_samples_not_already_in_train = np.setdiff1d(pos_samples_not_in_val, train_indices)
+        print(f"Got {len(pos_samples_not_already_in_train)} positive samples not already in training set")
+        if self.debug:
+            pos_samples_not_already_in_train = pos_samples_not_already_in_train[:10000]
+        return pos_samples_not_already_in_train
 
     def prepare_test_data(self):
         if self.config.model_config.name == ModelTypes.XGBOOST:
