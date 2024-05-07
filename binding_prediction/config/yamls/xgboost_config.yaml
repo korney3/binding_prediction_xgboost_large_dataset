@@ -13,7 +13,7 @@ model:
 train:
   early_stopping_rounds: 15
   pq_groups_numbers: [0, 1, 2, 3, 4,  5, 6,  7, 8,  9, 10, 11, 12, 13]
-  target_scale_pos_weight: 50
+  target_scale_pos_weight: 25
 featurizer:
   name: 'circular_fingerprint'
   radius: 3

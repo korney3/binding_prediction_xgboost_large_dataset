@@ -16,7 +16,7 @@ class XGBoostModel(Model):
         early_stopping_rounds = self.config.training_config.early_stopping_rounds
 
         check_point = xgboost.callback.TrainingCheckPoint(directory=self.config.logs_dir,
-                                                          iterations=3,
+                                                          iterations=1,
                                                           name='model', as_pickle=True)
 
         self.model = xgboost.train(params, train_Xy, num_rounds,
