@@ -46,3 +46,4 @@ class Featurizer(ABC):
             self.proteins_encoded.append(self.protein_map[protein])
         print(f"Protein encoding time: {time.time() - start_time}")
         self.smiles = self.row_group_df[WHOLE_MOLECULE_COLUMN]
+        self.featurize()

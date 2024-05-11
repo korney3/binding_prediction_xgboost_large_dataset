@@ -6,12 +6,13 @@ import xgboost
 import yaml
 
 from binding_prediction.config.config_creation import Config
-from binding_prediction.const import TARGET_COLUMN
+from binding_prediction.const import TARGET_COLUMN, PROTEIN_MAP_JSON_PATH
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
 from binding_prediction.utils import timing_decorator, pretty_print_text
 from binding_prediction.const import ModelTypes
+
 
 class TrainingPipeline:
     def __init__(self, config: Config,
@@ -25,7 +26,7 @@ class TrainingPipeline:
 
         self.model = None
 
-        self.protein_map_path = "data/protein_map.json"
+        self.protein_map_path = PROTEIN_MAP_JSON_PATH
 
     def run(self):
         if self.config.model_config.name == ModelTypes.XGBOOST:
@@ -104,17 +105,15 @@ class TrainingPipeline:
         self.save_train_val_indices(train_indices, val_indices)
 
         if self.config.model_config.name == ModelTypes.XGBOOST:
-            train_dataset = SmilesIterator(self.config.train_file_path, indicies=train_indices,
-                                           radius=self.config.featurizer_config.radius,
-                                           nBits=self.config.featurizer_config.length,
-                                           protein_map_path=self.protein_map_path)
+            train_dataset = SmilesIterator(self.config, self.config.train_file_path,
+                                           indicies=train_indices,
+                                           shuffle=True)
 
             self.config.protein_map_path = self.protein_map_path
 
-            val_dataset = SmilesIterator(self.config.train_file_path, indicies=val_indices,
-                                         radius=self.config.featurizer_config.radius,
-                                         nBits=self.config.featurizer_config.length,
-                                         protein_map_path=self.protein_map_path)
+            val_dataset = SmilesIterator(self.config, self.config.train_file_path,
+                                         indicies=val_indices,
+                                         shuffle=True)
 
             train_Xy = xgboost.DMatrix(train_dataset)
             val_Xy = xgboost.DMatrix(val_dataset)
@@ -146,10 +145,8 @@ class TrainingPipeline:
     def prepare_test_data(self):
         if self.config.model_config.name == ModelTypes.XGBOOST:
 
-            test_dataset = SmilesIterator(self.config.test_file_path, shuffle=False,
-                                          radius=self.config.featurizer_config.radius,
-                                          nBits=self.config.featurizer_config.length,
-                                          protein_map_path=self.protein_map_path)
+            test_dataset = SmilesIterator(self.config, self.config.test_file_path,
+                                          shuffle=False)
             test_Xy = xgboost.DMatrix(test_dataset)
             return test_dataset, test_Xy
         else:

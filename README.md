@@ -16,11 +16,11 @@ pip install -e .
 Get the data from the [Kaggle competition page](https://www.kaggle.com/competitions/leash-BELKA/data) and save it in
 the `data` folder.
 
-# XGBoost model baseline
+# XGBoost model
 
 Best test MAP score - 0.390
 
-## Train xgboost baseline model
+## Train xgboost model
 
 ```bash
 python binding_prediction/xgboost_training_pipeline.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \

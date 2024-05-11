@@ -10,6 +10,7 @@ import xgboost
 from binding_prediction.config.config_creation import Config
 from binding_prediction.data_processing.circular_fingerprints import CircularFingerprintFeaturizer
 from binding_prediction.const import FeaturizerTypes
+from binding_prediction.data_processing.maccs_fingerprint import MACCSFingerprintFeaturizer
 
 
 class SmilesIterator(xgboost.DataIter):
@@ -61,13 +62,17 @@ class SmilesIterator(xgboost.DataIter):
             featurizer = CircularFingerprintFeaturizer(self.config.featurizer_config, self._file_path,
                                                        self._protein_map,
                                                        indices=relative_indices)
-            featurizer.process_pq_row_group(current_index)
-            x, y = featurizer.x, featurizer.y
+        elif self.config.featurizer_config.name == FeaturizerTypes.MACCS:
+            featurizer = MACCSFingerprintFeaturizer(self.config.featurizer_config, self._file_path,
+                                                    self._protein_map,
+                                                    indices=relative_indices)
+
         else:
             raise NotImplementedError(f"Fingerprint "
                                       f"{self.config.featurizer_config.name} "
                                       f"is not implemented")
-
+        featurizer.process_pq_row_group(current_index)
+        x, y = featurizer.x, featurizer.y
         print("Fingerprinting time", time.time() - start_time)
         print("Inputting data")
         start_time = time.time()
