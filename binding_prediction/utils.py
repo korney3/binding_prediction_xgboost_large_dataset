@@ -14,14 +14,7 @@ def calculate_number_of_neg_and_pos_samples(pq_file, pq_groups_numbers=None):
     return neg_samples, pos_samples
 
 
-@dataclass
-class ModelTypes:
-    XGBOOST = 'xgboost'
 
-
-@dataclass
-class FeaturizerTypes:
-    CIRCULAR = 'circular_fingerprint'
 
 
 def timing_decorator(func):

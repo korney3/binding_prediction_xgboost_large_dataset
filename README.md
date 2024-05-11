@@ -29,14 +29,3 @@ python binding_prediction/xgboost_training_pipeline.py --input_parquet PATH_TO_I
 ```
 
 If You want to run it in debug mode, add `--debug` flag.
-
-# Featurize data with circular fingerprints and store cached np arrays
-
-This is outdated and not used anymore
-
-```bash
-# Train set
-python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/train.parquet
-# Test set
-python binding_prediction/preproces_and_save_circular_featurized_data.py --input_parquet data/test.parquet
-```

@@ -10,8 +10,8 @@ from binding_prediction.const import TARGET_COLUMN
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
-from binding_prediction.utils import ModelTypes, timing_decorator, pretty_print_text
-
+from binding_prediction.utils import timing_decorator, pretty_print_text
+from binding_prediction.const import ModelTypes
 
 class TrainingPipeline:
     def __init__(self, config: Config,
@@ -105,7 +105,6 @@ class TrainingPipeline:
 
         if self.config.model_config.name == ModelTypes.XGBOOST:
             train_dataset = SmilesIterator(self.config.train_file_path, indicies=train_indices,
-                                           fingerprint=self.config.featurizer_config.name,
                                            radius=self.config.featurizer_config.radius,
                                            nBits=self.config.featurizer_config.length,
                                            protein_map_path=self.protein_map_path)
@@ -113,7 +112,6 @@ class TrainingPipeline:
             self.config.protein_map_path = self.protein_map_path
 
             val_dataset = SmilesIterator(self.config.train_file_path, indicies=val_indices,
-                                         fingerprint=self.config.featurizer_config.name,
                                          radius=self.config.featurizer_config.radius,
                                          nBits=self.config.featurizer_config.length,
                                          protein_map_path=self.protein_map_path)
@@ -149,7 +147,6 @@ class TrainingPipeline:
         if self.config.model_config.name == ModelTypes.XGBOOST:
 
             test_dataset = SmilesIterator(self.config.test_file_path, shuffle=False,
-                                          fingerprint=self.config.featurizer_config.name,
                                           radius=self.config.featurizer_config.radius,
                                           nBits=self.config.featurizer_config.length,
                                           protein_map_path=self.protein_map_path)

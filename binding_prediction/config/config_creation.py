@@ -7,7 +7,7 @@ from binding_prediction.config.featurizer_config import CircularFingerprintFeatu
 from binding_prediction.config.model_config import XGBoostModelConfig, load_xgboost_model_config_from_yaml
 import typing as tp
 
-from binding_prediction.utils import ModelTypes
+from binding_prediction.const import ModelTypes
 import pyarrow.parquet as pq
 
 

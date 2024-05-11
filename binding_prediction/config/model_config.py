@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import yaml
 
-from binding_prediction.utils import ModelTypes
+from binding_prediction.const import ModelTypes
 
 
 @dataclass
