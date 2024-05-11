@@ -18,3 +18,4 @@ dependencies:
       - scikit-learn==1.4.2
       - duckdb==0.10.2
       - pytest==8.2.0
+      - PyYAML==6.0.1
