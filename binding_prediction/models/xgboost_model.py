@@ -12,7 +12,7 @@ class XGBoostModel(Model):
 
     def train(self, train_Xy, eval_list):
         params = self.config.model_config.__dict__
-        num_rounds = params.pop('num_boost_round')
+        num_rounds = params['num_boost_round']
         early_stopping_rounds = self.config.training_config.early_stopping_rounds
 
         check_point = xgboost.callback.TrainingCheckPoint(directory=self.config.logs_dir,

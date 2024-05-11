@@ -25,6 +25,8 @@ class TrainingPipeline:
 
         self.model = None
 
+        self.protein_map_path = "data/protein_map.json"
+
     def run(self):
         if self.config.model_config.name == ModelTypes.XGBOOST:
             train_Xy, val_Xy = self.prepare_train_val_data()
@@ -73,9 +75,10 @@ class TrainingPipeline:
             if self.config.training_config.pq_groups_numbers is not None:
                 train_size = 0
                 train_val_indices = []
+                shard_size = train_val_pq.metadata.row_group(0).num_rows
                 for group_number in self.config.training_config.pq_groups_numbers:
                     train_size += train_val_pq.metadata.row_group(group_number).num_rows
-                    start_index = train_val_pq.metadata.row_group(0).num_rows * group_number
+                    start_index = shard_size * group_number
                     train_val_indices.extend(
                         range(start_index, start_index + train_val_pq.metadata.row_group(group_number).num_rows))
             else:
@@ -84,38 +87,36 @@ class TrainingPipeline:
                                                     train_size,
                                                     replace=False)
 
-        train_indices, val_indices = self.get_train_val_indices(train_val_indices)
-
         if (0 <
                 self.config.training_config.target_scale_pos_weight <
                 self.config.neg_samples / self.config.pos_samples):
             pretty_print_text("Adding positive samples to training set")
-            pos_samples_indices = self.sample_positive_indexes_to_add_to_train(train_val_pq, train_indices,
-                                                                               val_indices)
+            pos_samples_indices = self.sample_positive_indexes_to_add_to_train(train_val_pq, train_val_indices)
             print(f"Got {len(pos_samples_indices)} indices")
-            train_indices = np.concatenate([train_indices, pos_samples_indices])
-            train_indices = self.rng.permutation(train_indices)
+            train_val_indices = np.concatenate([train_val_indices, pos_samples_indices])
+            train_val_indices = self.rng.permutation(train_val_indices)
 
             self.config.pos_samples += len(pos_samples_indices)
             self.config.model_config.scale_pos_weight = self.config.neg_samples / self.config.pos_samples
+
+        train_indices, val_indices = self.get_train_val_indices(train_val_indices)
 
         self.save_train_val_indices(train_indices, val_indices)
 
         if self.config.model_config.name == ModelTypes.XGBOOST:
             train_dataset = SmilesIterator(self.config.train_file_path, indicies=train_indices,
-                                           pq_row_group_numbers=self.config.training_config.pq_groups_numbers,
                                            fingerprint=self.config.featurizer_config.name,
                                            radius=self.config.featurizer_config.radius,
-                                           nBits=self.config.featurizer_config.length)
+                                           nBits=self.config.featurizer_config.length,
+                                           protein_map_path=self.protein_map_path)
 
-            self.config.protein_map_path = train_dataset.protein_map_path
+            self.config.protein_map_path = self.protein_map_path
 
             val_dataset = SmilesIterator(self.config.train_file_path, indicies=val_indices,
-                                         pq_row_group_numbers=self.config.training_config.pq_groups_numbers,
                                          fingerprint=self.config.featurizer_config.name,
                                          radius=self.config.featurizer_config.radius,
                                          nBits=self.config.featurizer_config.length,
-                                         protein_map_path=self.config.protein_map_path)
+                                         protein_map_path=self.protein_map_path)
 
             train_Xy = xgboost.DMatrix(train_dataset)
             val_Xy = xgboost.DMatrix(val_dataset)
@@ -124,13 +125,13 @@ class TrainingPipeline:
         else:
             raise ValueError(f"Model type {self.config.model_config.name} is not supported")
 
-    def sample_positive_indexes_to_add_to_train(self, train_val_pq, train_indices, val_indices):
+    def sample_positive_indexes_to_add_to_train(self, train_val_pq, train_val_indices):
         pos_samples_indexes = []
         group_size = train_val_pq.metadata.row_group(0).num_rows
         last_index = 0
         for group_number in range(train_val_pq.num_row_groups):
             row_group = train_val_pq.read_row_group(group_number).to_pandas()
-            pos_samples_indexes.extend([x+last_index for x in row_group[row_group[TARGET_COLUMN] == 1].index])
+            pos_samples_indexes.extend([x + last_index for x in row_group[row_group[TARGET_COLUMN] == 1].index])
             last_index += group_size
         pos_samples_indexes = np.array(pos_samples_indexes)
         print(f"Got {len(pos_samples_indexes)} positive samples")
@@ -138,13 +139,11 @@ class TrainingPipeline:
             self.config.neg_samples / self.config.training_config.target_scale_pos_weight - self.config.pos_samples)
         print(f"Sampling {pos_samples_to_sample} positive samples")
         pos_samples = self.rng.choice(pos_samples_indexes, pos_samples_to_sample, replace=False)
-        pos_samples_not_in_val = np.setdiff1d(pos_samples, val_indices)
-        print(f"Got {len(pos_samples_not_in_val)} positive samples not in validation set")
-        pos_samples_not_already_in_train = np.setdiff1d(pos_samples_not_in_val, train_indices)
-        print(f"Got {len(pos_samples_not_already_in_train)} positive samples not already in training set")
+        pos_samples_not_in_train_val = np.setdiff1d(pos_samples, train_val_indices)
+        print(f"Got {len(pos_samples_not_in_train_val)} positive samples not in validation set")
         if self.debug:
-            pos_samples_not_already_in_train = pos_samples_not_already_in_train[:10000]
-        return pos_samples_not_already_in_train
+            pos_samples_not_in_train_val = pos_samples_not_in_train_val[:10000]
+        return pos_samples_not_in_train_val
 
     def prepare_test_data(self):
         if self.config.model_config.name == ModelTypes.XGBOOST:
@@ -153,7 +152,7 @@ class TrainingPipeline:
                                           fingerprint=self.config.featurizer_config.name,
                                           radius=self.config.featurizer_config.radius,
                                           nBits=self.config.featurizer_config.length,
-                                          protein_map_path=self.config.protein_map_path)
+                                          protein_map_path=self.protein_map_path)
             test_Xy = xgboost.DMatrix(test_dataset)
             return test_dataset, test_Xy
         else:
@@ -161,7 +160,7 @@ class TrainingPipeline:
 
     def get_train_val_indices(self, train_val_indices):
         train_size = len(train_val_indices)
-        train_indices = self.rng.choice(train_val_indices, int(0.5 * train_size), replace=False)
+        train_indices = self.rng.choice(train_val_indices, int(0.8 * train_size), replace=False)
         val_indices = np.setdiff1d(train_val_indices, train_indices)
         return train_indices, val_indices
 

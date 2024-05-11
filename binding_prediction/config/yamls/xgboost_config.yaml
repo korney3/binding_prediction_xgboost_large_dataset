@@ -1,19 +1,20 @@
 model:
   name: 'xgboost'
-  max_depth: 40
+  eta: 0.05
+  max_depth: 10
   objective: 'binary:logistic'
   eval_metric: 'map'
   verbosity: 2
   nthread: 50
   tree_method: "hist"
   grow_policy: 'depthwise'
-  subsample: 0.8
-  colsample_bytree: 0.8
+  subsample: 0.6
+  colsample_bytree: 0.6
   num_boost_round: 100
+  alpha: 0.05
 train:
-  early_stopping_rounds: 15
-  pq_groups_numbers: [0, 1, 2, 3, 4,  5, 6,  7, 8,  9, 10, 11, 12, 13]
-  target_scale_pos_weight: 25
+  early_stopping_rounds: 3
+  pq_groups_numbers: [0, 1, 2, 3, 4,  5, 6,  7, 8,  9, 10, 11, 12, 13, 14, 15, 16,17,18,19,20,21,22,23,24,25,26]
 featurizer:
   name: 'circular_fingerprint'
   radius: 3

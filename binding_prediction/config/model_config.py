@@ -19,6 +19,8 @@ class XGBoostModelConfig:
     colsample_bytree: float
     num_boost_round: int
     scale_pos_weight: float
+    eta: float
+    alpha: float
 
 
 def load_xgboost_model_config_from_yaml(yaml_path: str,
@@ -31,18 +33,3 @@ def load_xgboost_model_config_from_yaml(yaml_path: str,
     config['scale_pos_weight'] = scale_pos_weight
     return XGBoostModelConfig(**config)
 
-
-@dataclass
-class XGBoostEnsembleModelConfig(XGBoostModelConfig):
-    weak_learner_config_path: str
-
-
-def load_xgboost_ensemble_model_config_from_yaml(yaml_path: str,
-                                                 scale_pos_weight=1.0) -> XGBoostEnsembleModelConfig:
-    with open(yaml_path, 'r') as file:
-        config = yaml.safe_load(file)["model"]
-    name = config['name']
-    if name not in ModelTypes.__dict__.values():
-        raise ValueError(f"Model {name} is not supported")
-    config['scale_pos_weight'] = scale_pos_weight
-    return XGBoostEnsembleModelConfig(**config)

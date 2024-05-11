@@ -12,14 +12,8 @@ from binding_prediction.utils import FeaturizerTypes
 
 
 class SmilesIterator(xgboost.DataIter):
-    def __init__(self, file_path: str,
-                 indicies: List[int] = None,
-                 pq_row_group_numbers: List[int] = None,
-                 shuffle: bool = True,
-                 fingerprint="circular",
-                 radius=2,
-                 nBits=2048,
-                 protein_map_path=None):
+    def __init__(self, file_path: str, indicies: List[int] = None, shuffle: bool = True, fingerprint="circular",
+                 radius=2, nBits=2048, protein_map_path=None):
         self._file_path = file_path
         self._parquet_filename = os.path.basename(file_path)
         self.parquet_file = pq.ParquetFile(file_path)
@@ -35,11 +29,7 @@ class SmilesIterator(xgboost.DataIter):
             self._shuffled_indices = np.arange(self._dataset_length)
         if shuffle:
             self._shuffled_indices = np.random.permutation(self._shuffled_indices)
-        self._pq_row_group_numbers = pq_row_group_numbers
-        if pq_row_group_numbers is not None:
-            self._num_shards = len(pq_row_group_numbers)
-        else:
-            self._num_shards = self.parquet_file.metadata.num_row_groups
+        self._num_shards = self.parquet_file.metadata.num_row_groups
 
         self._cache_path = os.path.join("data/processed", self._parquet_filename,
                                         f"{self._fingerprint}_{self._radius}_{self._fingerprint_length}")
@@ -63,15 +53,22 @@ class SmilesIterator(xgboost.DataIter):
             with open(self.protein_map_path, "r") as f:
                 self._protein_map = json.load(f)
         start_time = time.time()
+        while True:
+            current_index = self._it
 
-        current_index = self._it
-        if self._pq_row_group_numbers is not None:
-            current_index = self._pq_row_group_numbers[self._it]
+            print("Reading row group", current_index)
+            indicies_in_shard = np.array(self._shuffled_indices[np.where(
+                (self._shuffled_indices >= current_index * self.shard_size) & (
+                        self._shuffled_indices < (current_index + 1) * self.shard_size))])
+            if len(indicies_in_shard) > 0 or self._it == self._num_shards:
+                break
+            self._it += 1
 
-        print("Reading row group", current_index)
-        indicies_in_shard = np.array(self._shuffled_indices[np.where(
-            (self._shuffled_indices >= current_index * self.shard_size) & (
-                    self._shuffled_indices < (current_index + 1) * self.shard_size))])
+        if self._it == self._num_shards:
+            with open(self.protein_map_path, "w") as f:
+                json.dump(self._protein_map, f)
+            return 0
+
         relative_indicies = indicies_in_shard - current_index * self.shard_size
 
         if os.path.exists(os.path.join(self._cache_path, f"Commit_file_{current_index}.txt")):
@@ -84,15 +81,15 @@ class SmilesIterator(xgboost.DataIter):
             return 1
 
         if self._fingerprint == FeaturizerTypes.CIRCULAR:
+            print(f"Number of indicies in shard {len(indicies_in_shard)}")
             input_smiles, x, y = create_circular_fingerprints_from_pq_row_group(self._file_path, current_index,
                                                                                 self._protein_map,
                                                                                 self._radius,
-                                                                                self._fingerprint_length)
+                                                                                self._fingerprint_length,
+                                                                                indicies=relative_indicies)
         else:
             raise NotImplementedError(f"Fingerprint {self._fingerprint} is not implemented")
 
-        x = x[relative_indicies]
-        y = y[relative_indicies]
         print("Fingerprinting time", time.time() - start_time)
         print("Inputting data")
         start_time = time.time()

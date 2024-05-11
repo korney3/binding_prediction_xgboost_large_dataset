@@ -17,7 +17,6 @@ def calculate_number_of_neg_and_pos_samples(pq_file, pq_groups_numbers=None):
 @dataclass
 class ModelTypes:
     XGBOOST = 'xgboost'
-    XGBOOST_ENSEMBLE = 'xgboost_ensemble'
 
 
 @dataclass
