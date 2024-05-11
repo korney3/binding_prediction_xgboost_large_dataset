@@ -14,7 +14,8 @@ from binding_prediction.data_processing.maccs_fingerprint import MACCSFingerprin
 
 
 class SmilesIterator(xgboost.DataIter):
-    def __init__(self, config: Config, file_path: str, indicies: List[int] = None, shuffle: bool = True):
+    def __init__(self, config: Config, file_path: str,
+                 indicies: List[int] = None, shuffle: bool = True):
         self.config = config
         self._file_path = file_path
         self._parquet_filename = os.path.basename(file_path)

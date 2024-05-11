@@ -30,6 +30,7 @@ def load_xgboost_model_config_from_yaml(yaml_path: str,
     name = config['name']
     if name not in ModelTypes.__dict__.values():
         raise ValueError(f"Model {name} is not supported")
-    config['scale_pos_weight'] = scale_pos_weight
+    if 'scale_pos_weight' not in config:
+        config['scale_pos_weight'] = scale_pos_weight
     return XGBoostModelConfig(**config)
 

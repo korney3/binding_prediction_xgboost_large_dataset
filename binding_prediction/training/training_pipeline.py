@@ -87,7 +87,9 @@ class TrainingPipeline:
                 train_val_indices = self.rng.choice(train_val_pq.metadata.num_rows,
                                                     train_size,
                                                     replace=False)
-
+        if self.config.training_config.train_size != -1 and self.config.training_config.train_size < train_size:
+            train_val_indices = self.rng.choice(train_val_indices,
+                                                self.config.training_config.train_size, replace=False)
         if (0 <
                 self.config.training_config.target_scale_pos_weight <
                 self.config.neg_samples / self.config.pos_samples):

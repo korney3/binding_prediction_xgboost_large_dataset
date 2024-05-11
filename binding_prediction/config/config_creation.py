@@ -17,6 +17,7 @@ class TrainingConfig:
     early_stopping_rounds: int
     pq_groups_numbers: tp.Optional[tp.List[int]] = None
     target_scale_pos_weight: float = -1
+    train_size: int = -1
 
 
 def load_training_config_from_yaml(yaml_path: str) -> TrainingConfig:
