@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from functools import partial
@@ -22,7 +23,8 @@ def smiles_to_fingerprint(smiles, nBits=2048, radius=2):
 def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
                       circular_fingerprint_radius, circular_fingerprint_length):
     if os.path.exists(os.path.join(output_dir, f'Commit_file_{row_group_number}.txt')):
-        protein_map = np.load(os.path.join(output_dir, 'protein_map.npy'), allow_pickle=True).item()
+        with open(os.path.join(output_dir, 'protein_map.json'), 'r') as f:
+            protein_map = json.load(f)
         return protein_map
     input_smiles, x, y = create_circular_fingerprints_from_pq_row_group(pq_file_path, row_group_number, protein_map,
                                                                         circular_fingerprint_radius,
@@ -34,15 +36,19 @@ def process_row_group(pq_file_path, row_group_number, output_dir, protein_map,
     with open(os.path.join(output_dir, f'Commit_file_{row_group_number}.txt'), 'w') as f:
         f.write('Commit')
     print(f"Saving time: {time.time() - start_time}")
-    np.save(os.path.join(output_dir, 'protein_map.npy'), protein_map)
+    with open(os.path.join(output_dir, 'protein_map.json'), 'w') as f:
+        json.dump(protein_map, f)
     return protein_map
 
 
 def create_circular_fingerprints_from_pq_row_group(pq_file_path, row_group_number, protein_map,
-                                                   circular_fingerprint_radius, circular_fingerprint_length):
+                                                   circular_fingerprint_radius, circular_fingerprint_length,
+                                                   indicies=None):
     print(f"Processing row group {row_group_number}")
     start_time = time.time()
     row_group_df = pq.ParquetFile(pq_file_path).read_row_group(row_group_number).to_pandas()
+    if indicies is not None:
+        row_group_df = row_group_df.iloc[indicies]
     print(f"Reading time: {time.time() - start_time}")
     start_time = time.time()
     proteins_encoded = []
