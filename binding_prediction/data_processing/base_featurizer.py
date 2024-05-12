@@ -1,20 +1,20 @@
 import time
 import typing as tp
 from abc import ABC
+from multiprocessing import Pool
 
+import numpy as np
 from pyarrow import parquet as pq
 
-from binding_prediction.config.featurizer_config import CircularFingerprintFeaturizerConfig, \
-    MACCSFingerprintFeaturizerConfig
+from binding_prediction.config.config import Config
 from binding_prediction.const import PROTEIN_COLUMN, WHOLE_MOLECULE_COLUMN
+from binding_prediction.const import TARGET_COLUMN
 
 
 class Featurizer(ABC):
-    def __init__(self, config: tp.Union[
-        CircularFingerprintFeaturizerConfig,
-        MACCSFingerprintFeaturizerConfig],
+    def __init__(self, config: Config,
                  pq_file_path: str, protein_map: tp.Dict[str, int], indices: tp.List[int] = None):
-        self.config = config
+        self.featurizer_config = config.yaml_config.featurizer_config
         self.pq_file_path = pq_file_path
         self.protein_map = protein_map
         self.indices = indices
@@ -47,3 +47,22 @@ class Featurizer(ABC):
         print(f"Protein encoding time: {time.time() - start_time}")
         self.smiles = self.row_group_df[WHOLE_MOLECULE_COLUMN]
         self.featurize()
+
+    def _featurize(self, smiles_to_fingerprint):
+        start_time = time.time()
+        with Pool(8) as p:
+            x = np.array(p.map(smiles_to_fingerprint, self.smiles))
+        print(f"Fingerprinting time: {time.time() - start_time}")
+        start_time = time.time()
+        self.add_protein_encoded_feature(x)
+        self.create_target(x)
+        print(f"Combining time: {time.time() - start_time}")
+
+    def add_protein_encoded_feature(self, x):
+        self.x = np.array([x[i] + [self.proteins_encoded[i]] for i in range(len(x))])
+
+    def create_target(self, x):
+        if TARGET_COLUMN in self.row_group_df.columns:
+            self.y = np.array(self.row_group_df[TARGET_COLUMN])
+        else:
+            self.y = np.array([-1] * len(x))

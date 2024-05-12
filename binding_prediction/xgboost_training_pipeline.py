@@ -6,7 +6,7 @@ import numpy as np
 import pyarrow.parquet as pq
 import yaml
 
-from binding_prediction.config.config_creation import create_training_config
+from binding_prediction.config.config import create_config
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
 
@@ -41,9 +41,9 @@ def main():
 
     neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq, pq_groups_numbers)
 
-    config = create_training_config(train_file_path=args.input_parquet, test_file_path=args.test_parquet,
-                                    logs_dir=logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
-                                    config_yaml_path=args.config_path)
+    config = create_config(train_file_path=args.input_parquet, test_file_path=args.test_parquet,
+                           logs_dir=logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
+                           config=args.config_path)
 
     training_pipeline = TrainingPipeline(config,
                                          debug=args.debug,
