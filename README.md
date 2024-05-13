@@ -14,7 +14,7 @@ I've been able to fit **50M** samples with **512** CircularFingerprint features.
 ### Current limitations:
 - The code is optimized for running on a single machine with a large amount of RAM. It is not optimized for running on a cluster.
 - Competition data is demonstrating binding between small molecules and only 3 proteins. 
-So protein data is included into trainig features only as LabelEncoded feature. 
+So protein data is included into training features only as LabelEncoded feature (mapping can be seen [here](./data/processed/protein_map.json)). 
 I think for datasets with more diverse protein data it worth to add meaningful embeddings encoding proteins
 
 # Installation
