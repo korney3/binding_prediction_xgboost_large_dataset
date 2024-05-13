@@ -28,6 +28,7 @@ def main():
     current_date = time.strftime("%Y-%m-%d_%H-%M-%S")
 
     parent_logs_dir = os.path.join('logs', current_date)
+    parent_logs_dir = "logs/2024-05-12_00-36-58"
     os.makedirs(parent_logs_dir, exist_ok=True)
 
     rng = np.random.default_rng(seed=42)
@@ -51,13 +52,14 @@ def main():
     num_weak_learners = (train_val_pq.metadata.num_rows //
                          ensemble_config.yaml_config.model_config.weak_learner_config["train"]["train_size"])
     ensemble_config.yaml_config.model_config.num_weak_learners = num_weak_learners
-    save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
-                                    parent_logs_dir, rng)
-
-    for i in range(num_weak_learners):
-        train_weak_learner(train_val_pq, args, i, parent_logs_dir)
-
-    training_pipeline = TrainingPipeline(ensemble_config, debug=args.debug, rng=rng)
+    # save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
+    #                                 parent_logs_dir, rng)
+    #
+    # for i in range(num_weak_learners):
+    #     train_weak_learner(train_val_pq, args, i, parent_logs_dir)
+    final_ensemble_model_indices = np.load(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'))
+    training_pipeline = TrainingPipeline(ensemble_config, debug=args.debug, rng=rng,
+                                         train_val_indices=final_ensemble_model_indices)
     training_pipeline.run()
 
 

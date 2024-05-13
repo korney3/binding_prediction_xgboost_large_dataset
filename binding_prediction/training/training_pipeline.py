@@ -37,7 +37,8 @@ class TrainingPipeline:
             self.train_val_indices = np.arange(self.train_val_pq.metadata.num_rows)
 
     def run(self):
-        if self.config.yaml_config.model_config.name == ModelTypes.XGBOOST:
+        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
+                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             train_Xy, val_Xy = self.prepare_train_val_data()
             self.save_config()
             self.model = XGBoostModel(self.config)
@@ -53,7 +54,8 @@ class TrainingPipeline:
     @timing_decorator
     def train(self, train_dataset, val_dataset):
         pretty_print_text("Training model")
-        if self.config.yaml_config.model_config.name == ModelTypes.XGBOOST:
+        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
+                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             eval_list = [(train_dataset, 'train'), (val_dataset, 'eval')]
             self.model.train(train_dataset, eval_list)
             self.model.save(os.path.join(self.config.logs_dir, 'model.pkl'))
@@ -63,7 +65,8 @@ class TrainingPipeline:
     @timing_decorator
     def evaluate(self):
         pretty_print_text("Testing model")
-        if self.config.yaml_config.model_config.name == ModelTypes.XGBOOST:
+        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
+                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             test_dataset, test_Xy = self.prepare_test_data()
             get_submission_test_predictions_for_xgboost_model(test_dataset, test_Xy,
                                                               self.model, self.config.logs_dir)
@@ -121,7 +124,8 @@ class TrainingPipeline:
 
         self.save_train_val_indices(train_indices, val_indices)
 
-        if self.config.yaml_config.model_config.name == ModelTypes.XGBOOST:
+        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
+                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             train_dataset = SmilesIterator(self.config, self.config.train_file_path,
                                            indicies=train_indices,
                                            shuffle=True)
@@ -160,7 +164,8 @@ class TrainingPipeline:
         return pos_samples_not_in_train_val
 
     def prepare_test_data(self):
-        if self.config.yaml_config.model_config.name == ModelTypes.XGBOOST:
+        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
+                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
 
             test_dataset = SmilesIterator(self.config, self.config.test_file_path,
                                           shuffle=False)

@@ -12,8 +12,8 @@ from binding_prediction.data_processing.base_featurizer import Featurizer
 class CircularFingerprintFeaturizer(Featurizer):
     def __init__(self, config: Config,
                  pq_file_path: str, protein_map: tp.Dict[str, int],
-                 indices: tp.List[int] = None):
-        super().__init__(config, pq_file_path, protein_map, indices)
+                 relative_indices: tp.List[int] = None):
+        super().__init__(config, pq_file_path, protein_map, relative_indices)
 
     def featurize(self):
         partial_smiles_to_fingerprint = (

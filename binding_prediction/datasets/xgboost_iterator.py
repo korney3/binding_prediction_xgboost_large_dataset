@@ -12,7 +12,7 @@ from binding_prediction.data_processing.circular_fingerprints import CircularFin
 from binding_prediction.const import FeaturizerTypes
 from binding_prediction.data_processing.ensemble_predictions_fingerprint import EnsemblePredictionsFeaturizer
 from binding_prediction.data_processing.maccs_fingerprint import MACCSFingerprintFeaturizer
-from binding_prediction.utils import get_relative_indices
+from binding_prediction.utils import get_indices_in_shard
 
 
 class SmilesIterator(xgboost.DataIter):
@@ -48,7 +48,7 @@ class SmilesIterator(xgboost.DataIter):
             current_index = self._it
 
             print("Reading row group", current_index)
-            relative_indices = get_relative_indices(self._shuffled_indices, current_index, self.shard_size)
+            indices_in_shard, relative_indices = get_indices_in_shard(self._shuffled_indices, current_index, self.shard_size)
             if len(relative_indices) > 0 or self._it == self._num_shards:
                 break
             self._it += 1
@@ -60,15 +60,16 @@ class SmilesIterator(xgboost.DataIter):
             print(f"Number of indicies in shard {len(relative_indices)}")
             featurizer = CircularFingerprintFeaturizer(self.config, self._file_path,
                                                        self._protein_map,
-                                                       indices=relative_indices)
+                                                       relative_indices=relative_indices)
         elif self.config.yaml_config.featurizer_config.name == FeaturizerTypes.MACCS:
             featurizer = MACCSFingerprintFeaturizer(self.config, self._file_path,
                                                     self._protein_map,
-                                                    indices=relative_indices)
+                                                    relative_indices=relative_indices)
         elif self.config.yaml_config.featurizer_config.name == FeaturizerTypes.ENSEMBLE_PREDICTIONS:
             featurizer = EnsemblePredictionsFeaturizer(self.config, self._file_path,
                                                        self._protein_map,
-                                                       indices=relative_indices)
+                                                       relative_indices=relative_indices,
+                                                       indices_in_shard=indices_in_shard)
         else:
             raise NotImplementedError(f"Fingerprint "
                                       f"{self.config.yaml_config.featurizer_config.name} "

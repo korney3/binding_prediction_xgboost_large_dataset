@@ -3,12 +3,12 @@ import time
 import numpy as np
 
 
-def get_relative_indices(indices, current_shard_num, shard_size):
+def get_indices_in_shard(indices, current_shard_num, shard_size):
     indices_in_shard = np.array(indices[np.where(
         (indices >= current_shard_num * shard_size) & (
                 indices < (current_shard_num + 1) * shard_size))])
     relative_indices = indices_in_shard - current_shard_num * shard_size
-    return relative_indices
+    return indices_in_shard, relative_indices
 
 
 def calculate_number_of_neg_and_pos_samples(pq_file,
@@ -22,7 +22,7 @@ def calculate_number_of_neg_and_pos_samples(pq_file,
     for group_id in pq_groups_numbers:
         group_df = pq_file.read_row_group(group_id).to_pandas()
         if indices is not None:
-            relative_indices = get_relative_indices(indices, group_id, shard_size)
+            _, relative_indices = get_indices_in_shard(indices, group_id, shard_size)
             group_df = group_df.iloc[relative_indices]
 
         neg_samples += len(group_df[group_df['binds'] == 0])

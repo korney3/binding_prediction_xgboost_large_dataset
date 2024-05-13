@@ -13,11 +13,11 @@ from binding_prediction.const import TARGET_COLUMN
 
 class Featurizer(ABC):
     def __init__(self, config: Config,
-                 pq_file_path: str, protein_map: tp.Dict[str, int], indices: tp.List[int] = None):
+                 pq_file_path: str, protein_map: tp.Dict[str, int], relative_indices: tp.List[int] = None):
         self.featurizer_config = config.yaml_config.featurizer_config
         self.pq_file_path = pq_file_path
         self.protein_map = protein_map
-        self.indices = indices
+        self.relative_indices = relative_indices
 
         self.row_group_df = None
         self.smiles = None
@@ -36,8 +36,8 @@ class Featurizer(ABC):
         print(f"Processing row group {row_group_number}")
         start_time = time.time()
         self.row_group_df = pq.ParquetFile(self.pq_file_path).read_row_group(row_group_number).to_pandas()
-        if self.indices is not None:
-            self.row_group_df = self.row_group_df.iloc[self.indices]
+        if self.relative_indices is not None:
+            self.row_group_df = self.row_group_df.iloc[self.relative_indices]
         print(f"Reading time: {time.time() - start_time}")
         start_time = time.time()
         for protein in self.row_group_df[PROTEIN_COLUMN]:
@@ -51,18 +51,18 @@ class Featurizer(ABC):
     def _featurize(self, smiles_to_fingerprint):
         start_time = time.time()
         with Pool(8) as p:
-            x = np.array(p.map(smiles_to_fingerprint, self.smiles))
+            self.x = np.array(p.map(smiles_to_fingerprint, self.smiles))
         print(f"Fingerprinting time: {time.time() - start_time}")
         start_time = time.time()
-        self.add_protein_encoded_feature(x)
-        self.create_target(x)
+        self.add_protein_encoded_feature()
+        self.create_target()
         print(f"Combining time: {time.time() - start_time}")
 
-    def add_protein_encoded_feature(self, x):
-        self.x = np.array([x[i] + [self.proteins_encoded[i]] for i in range(len(x))])
+    def add_protein_encoded_feature(self):
+        self.x = np.array([self.x[i] + [self.proteins_encoded[i]] for i in range(len(self.x))])
 
-    def create_target(self, x):
+    def create_target(self):
         if TARGET_COLUMN in self.row_group_df.columns:
             self.y = np.array(self.row_group_df[TARGET_COLUMN])
         else:
-            self.y = np.array([-1] * len(x))
+            self.y = np.array([-1] * len(self.x))
