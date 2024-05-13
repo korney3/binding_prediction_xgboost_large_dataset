@@ -13,11 +13,11 @@ model:
       grow_policy: 'depthwise'
       subsample: 0.6
       colsample_bytree: 0.6
-      num_boost_round: 1
+      num_boost_round: 100
       alpha: 0.05
     train:
-      early_stopping_rounds: 1
-      train_size: 500000
+      early_stopping_rounds: 5
+      train_size: 26000000
     featurizer:
       name: 'circular_fingerprint'
       radius: 3
