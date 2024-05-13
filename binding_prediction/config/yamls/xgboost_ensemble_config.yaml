@@ -36,5 +36,6 @@ model:
   alpha: 0.05
 train:
   early_stopping_rounds: 5
+  train_size: 26000000
 featurizer:
   name: 'ensemble_predictions'

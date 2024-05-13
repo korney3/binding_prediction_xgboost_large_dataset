@@ -11,7 +11,7 @@ from binding_prediction.config.config import create_config
 from binding_prediction.const import WEAK_LEARNER_ARTIFACTS_NAME_PREFIX
 from binding_prediction.evaluation.utils import evaluate_validation_set, evaluate_test_set
 from binding_prediction.training.training_pipeline import TrainingPipeline
-from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
+from binding_prediction.utils import calculate_number_of_neg_and_pos_samples, pretty_print_text
 
 
 def parse_args():
@@ -50,14 +50,20 @@ def main():
                                     logs_dir=parent_logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
                                     config=args.config_path)
 
-    num_weak_learners = (train_val_pq.metadata.num_rows //
+    weak_learners_train_size = train_val_pq.metadata.num_rows
+    if ensemble_config.yaml_config.training_config.train_size != -1:
+        weak_learners_train_size = train_val_pq.metadata.num_rows - ensemble_config.yaml_config.training_config.train_size
+    num_weak_learners = (weak_learners_train_size //
                          ensemble_config.yaml_config.model_config.weak_learner_config["train"]["train_size"])
     ensemble_config.yaml_config.model_config.num_weak_learners = num_weak_learners
     save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
                                     parent_logs_dir, rng)
 
     for i in range(num_weak_learners):
+        pretty_print_text(f"Training weak learner {i}")
         train_weak_learner(train_val_pq, args, i, parent_logs_dir)
+
+    pretty_print_text("Training ensemble model")
     final_ensemble_model_indices = np.load(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'))
     training_pipeline = TrainingPipeline(ensemble_config, debug=args.debug, rng=rng,
                                          train_val_indices=final_ensemble_model_indices)

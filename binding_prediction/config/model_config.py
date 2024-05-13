@@ -21,6 +21,7 @@ class XGBoostModelConfig:
     scale_pos_weight: float
     eta: float
     alpha: float
+    device: str = 'cpu'
 
 
 def load_xgboost_model_config_from_yaml_path(yaml_path: str,
