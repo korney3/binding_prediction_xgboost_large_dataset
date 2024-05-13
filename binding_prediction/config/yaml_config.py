@@ -3,14 +3,17 @@ from dataclasses import dataclass
 
 from binding_prediction.config.config_creator import get_featurizer_config, get_model_config
 from binding_prediction.config.featurizer_config import CircularFingerprintFeaturizerConfig, \
-    MACCSFingerprintFeaturizerConfig
+    MACCSFingerprintFeaturizerConfig, EnsemblePredictionsFeaturizerConfig
 from binding_prediction.config.model_config import XGBoostModelConfig, XGBoostEnsembleModelConfig
 from binding_prediction.config.training_config import TrainingConfig, create_training_config_from_dict
 
 
 @dataclass
 class YamlConfig:
-    featurizer_config: tp.Union[CircularFingerprintFeaturizerConfig, MACCSFingerprintFeaturizerConfig]
+    featurizer_config: tp.Union[
+        CircularFingerprintFeaturizerConfig,
+        MACCSFingerprintFeaturizerConfig,
+        EnsemblePredictionsFeaturizerConfig]
     model_config: tp.Union[XGBoostModelConfig, XGBoostEnsembleModelConfig]
     training_config: TrainingConfig
 

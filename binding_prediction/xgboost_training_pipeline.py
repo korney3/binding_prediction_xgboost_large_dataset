@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 import yaml
 
 from binding_prediction.config.config import create_config
+from binding_prediction.evaluation.utils import evaluate_test_set, evaluate_validation_set
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
 
@@ -50,6 +51,10 @@ def main():
                                          rng=np.random.default_rng(seed=42))
 
     training_pipeline.run()
+
+    evaluate_validation_set(config, args.input_parquet, args.debug)
+
+    evaluate_test_set(config, args.test_parquet, args.debug)
 
 
 if __name__ == '__main__':

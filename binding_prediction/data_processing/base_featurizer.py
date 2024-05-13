@@ -1,3 +1,4 @@
+import json
 import time
 import typing as tp
 from abc import ABC
@@ -12,16 +13,20 @@ from binding_prediction.const import TARGET_COLUMN
 
 
 class Featurizer(ABC):
-    def __init__(self, config: Config,
-                 pq_file_path: str, protein_map: tp.Dict[str, int], relative_indices: tp.List[int] = None):
+    def __init__(self, config: Config, pq_file_path: str):
+
         self.featurizer_config = config.yaml_config.featurizer_config
         self.pq_file_path = pq_file_path
-        self.protein_map = protein_map
-        self.relative_indices = relative_indices
+
+        with open(config.protein_map_path, "r") as f:
+            self.protein_map = json.load(f)
 
         self.row_group_df = None
         self.smiles = None
         self.proteins_encoded = []
+
+        self.relative_indices = None
+        self.indices_in_shard = None
 
         self.x = None
         self.y = None
@@ -29,7 +34,11 @@ class Featurizer(ABC):
     def featurize(self):
         pass
 
-    def process_pq_row_group(self, row_group_number):
+    def process_pq_row_group(self, row_group_number,
+                             indices_in_shard: tp.List[int],
+                             relative_indices: tp.List[int] = None):
+        self.relative_indices = relative_indices
+        self.indices_in_shard = indices_in_shard
         self.prepare_input_smiles(row_group_number)
 
     def prepare_input_smiles(self, row_group_number):

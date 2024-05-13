@@ -70,3 +70,5 @@ def get_training_config(config: tp.Union[str, dict]):
                                             create_training_config_from_dict)
     config = training_config_creator.create()
     return config
+
+

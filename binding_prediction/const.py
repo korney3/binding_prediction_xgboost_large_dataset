@@ -5,6 +5,8 @@ WHOLE_MOLECULE_COLUMN = 'molecule_smiles'
 PROTEIN_COLUMN = 'protein_name'
 PROTEIN_MAP_JSON_PATH = 'data/processed/protein_map.json'
 
+WEAK_LEARNER_ARTIFACTS_NAME_PREFIX = 'weak_learner_'
+
 @dataclass
 class ModelTypes:
     XGBOOST = 'xgboost'

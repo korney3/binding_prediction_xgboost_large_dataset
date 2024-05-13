@@ -24,3 +24,4 @@ def create_training_config_from_dict(config: dict) -> TrainingConfig:
     if config.pq_groups_numbers is not None:
         config.pq_groups_numbers = sorted(config.pq_groups_numbers)
     return config
+

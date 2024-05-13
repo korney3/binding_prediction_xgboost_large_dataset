@@ -7,6 +7,7 @@ import yaml
 
 from binding_prediction.config.config import Config
 from binding_prediction.const import TARGET_COLUMN, PROTEIN_MAP_JSON_PATH
+from binding_prediction.data_processing.utils import get_featurizer
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
@@ -27,8 +28,6 @@ class TrainingPipeline:
 
         self.model = None
 
-        self.protein_map_path = PROTEIN_MAP_JSON_PATH
-
         self.train_val_pq = pq.ParquetFile(self.config.train_file_path)
         if train_val_indices is not None:
             assert self.config.yaml_config.training_config.pq_groups_numbers is None
@@ -43,7 +42,6 @@ class TrainingPipeline:
             self.save_config()
             self.model = XGBoostModel(self.config)
             self.train(train_Xy, val_Xy)
-            self.evaluate()
         else:
             raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
 
@@ -61,27 +59,6 @@ class TrainingPipeline:
             self.model.save(os.path.join(self.config.logs_dir, 'model.pkl'))
         else:
             raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
-
-    @timing_decorator
-    def evaluate(self):
-        pretty_print_text("Testing model")
-        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
-                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-            test_dataset, test_Xy = self.prepare_test_data()
-            get_submission_test_predictions_for_xgboost_model(test_dataset, test_Xy,
-                                                              self.model, self.config.logs_dir)
-        else:
-            raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
-
-    def predict(self, indices):
-        dataset = SmilesIterator(self.config,
-                                 self.config.train_file_path,
-                                 indicies=indices,
-                                 shuffle=False)
-
-        predict_Xy = xgboost.DMatrix(dataset)
-        predictions = self.model.predict(predict_Xy)
-        return predictions
 
     @timing_decorator
     def prepare_train_val_data(self):
@@ -126,13 +103,13 @@ class TrainingPipeline:
 
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-            train_dataset = SmilesIterator(self.config, self.config.train_file_path,
+            train_featurizer = get_featurizer(self.config, self.config.train_file_path)
+            train_dataset = SmilesIterator(self.config, train_featurizer, self.config.train_file_path,
                                            indicies=train_indices,
                                            shuffle=True)
 
-            self.config.protein_map_path = self.protein_map_path
-
-            val_dataset = SmilesIterator(self.config, self.config.train_file_path,
+            val_featurizer = get_featurizer(self.config, self.config.train_file_path)
+            val_dataset = SmilesIterator(self.config, val_featurizer, self.config.train_file_path,
                                          indicies=val_indices,
                                          shuffle=True)
 
@@ -162,17 +139,6 @@ class TrainingPipeline:
         if self.debug:
             pos_samples_not_in_train_val = pos_samples_not_in_train_val[:10000]
         return pos_samples_not_in_train_val
-
-    def prepare_test_data(self):
-        if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
-                self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-
-            test_dataset = SmilesIterator(self.config, self.config.test_file_path,
-                                          shuffle=False)
-            test_Xy = xgboost.DMatrix(test_dataset)
-            return test_dataset, test_Xy
-        else:
-            raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
 
     def get_train_val_indices(self, train_val_indices):
         train_size = len(train_val_indices)

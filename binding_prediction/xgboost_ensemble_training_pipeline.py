@@ -8,6 +8,8 @@ import pyarrow.parquet as pq
 import yaml
 
 from binding_prediction.config.config import create_config
+from binding_prediction.const import WEAK_LEARNER_ARTIFACTS_NAME_PREFIX
+from binding_prediction.evaluation.utils import evaluate_validation_set, evaluate_test_set
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
 
@@ -28,7 +30,6 @@ def main():
     current_date = time.strftime("%Y-%m-%d_%H-%M-%S")
 
     parent_logs_dir = os.path.join('logs', current_date)
-    parent_logs_dir = "logs/2024-05-12_00-36-58"
     os.makedirs(parent_logs_dir, exist_ok=True)
 
     rng = np.random.default_rng(seed=42)
@@ -52,20 +53,24 @@ def main():
     num_weak_learners = (train_val_pq.metadata.num_rows //
                          ensemble_config.yaml_config.model_config.weak_learner_config["train"]["train_size"])
     ensemble_config.yaml_config.model_config.num_weak_learners = num_weak_learners
-    # save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
-    #                                 parent_logs_dir, rng)
-    #
-    # for i in range(num_weak_learners):
-    #     train_weak_learner(train_val_pq, args, i, parent_logs_dir)
+    save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
+                                    parent_logs_dir, rng)
+
+    for i in range(num_weak_learners):
+        train_weak_learner(train_val_pq, args, i, parent_logs_dir)
     final_ensemble_model_indices = np.load(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'))
     training_pipeline = TrainingPipeline(ensemble_config, debug=args.debug, rng=rng,
                                          train_val_indices=final_ensemble_model_indices)
     training_pipeline.run()
 
+    evaluate_validation_set(ensemble_config, args.input_parquet, args.debug)
+
+    evaluate_test_set(ensemble_config, args.test_parquet, args.debug)
+
 
 def train_weak_learner(train_val_pq, args, weak_learner_num, parent_logs_dir):
     train_val_indices = np.load(os.path.join(parent_logs_dir, f'weak_learner_{weak_learner_num}_indices.npy'))
-    logs_dir = os.path.join(parent_logs_dir, f'weak_learner_{weak_learner_num}')
+    logs_dir = os.path.join(parent_logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{weak_learner_num}')
     os.makedirs(logs_dir, exist_ok=True)
     neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq,
                                                                        indices=train_val_indices)
@@ -79,19 +84,12 @@ def train_weak_learner(train_val_pq, args, weak_learner_num, parent_logs_dir):
                                          rng=np.random.default_rng(seed=42),
                                          train_val_indices=train_val_indices)
     training_pipeline.run()
-    save_predictions_for_ensemble_model(training_pipeline, weak_learner_num, parent_logs_dir)
+
+    evaluate_validation_set(config, args.input_parquet, args.debug)
+
+    evaluate_test_set(config, args.test_parquet, args.debug)
+
     delete_xgboost_cache()
-
-
-def save_predictions_for_ensemble_model(training_pipeline, weak_learner_num, parent_logs_dir):
-    final_ensemble_model_indices = np.load(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'))
-    final_ensemble_model_predictions = training_pipeline.predict(final_ensemble_model_indices)
-    final_ensemble_model_predictions_df = pd.DataFrame(columns=['index_in_train_file', 'prediction'])
-    final_ensemble_model_predictions_df['index_in_train_file'] = final_ensemble_model_indices
-    final_ensemble_model_predictions_df['prediction'] = final_ensemble_model_predictions
-    final_ensemble_model_predictions_df.to_csv(
-        os.path.join(parent_logs_dir, f'final_ensemble_model_predictions_{weak_learner_num}.csv'),
-        index=False)
 
 
 def delete_xgboost_cache():
@@ -108,7 +106,7 @@ def save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_lear
                                           replace=False)
     final_ensemble_model_indices = np.setdiff1d(all_train_val_indices, all_weak_learner_indices.flatten())
     for i in range(num_weak_learners):
-        np.save(os.path.join(parent_logs_dir, f'weak_learner_{i}_indices.npy'), all_weak_learner_indices[i])
+        np.save(os.path.join(parent_logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'), all_weak_learner_indices[i])
     np.save(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'), final_ensemble_model_indices)
 
 

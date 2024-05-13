@@ -8,17 +8,16 @@ import pyarrow.parquet as pq
 import xgboost
 
 from binding_prediction.config.config import Config
-from binding_prediction.data_processing.circular_fingerprints import CircularFingerprintFeaturizer
-from binding_prediction.const import FeaturizerTypes
-from binding_prediction.data_processing.ensemble_predictions_fingerprint import EnsemblePredictionsFeaturizer
-from binding_prediction.data_processing.maccs_fingerprint import MACCSFingerprintFeaturizer
+from binding_prediction.data_processing.base_featurizer import Featurizer
 from binding_prediction.utils import get_indices_in_shard
 
 
 class SmilesIterator(xgboost.DataIter):
-    def __init__(self, config: Config, file_path: str,
+    def __init__(self, config: Config, featurizer: Featurizer, file_path: str,
                  indicies: List[int] = None, shuffle: bool = True):
         self.config = config
+        self.featurizer = featurizer
+
         self._file_path = file_path
         self._parquet_filename = os.path.basename(file_path)
         self.parquet_file = pq.ParquetFile(file_path)
@@ -55,27 +54,9 @@ class SmilesIterator(xgboost.DataIter):
 
         if self._it == self._num_shards:
             return 0
-
-        if self.config.yaml_config.featurizer_config.name == FeaturizerTypes.CIRCULAR:
-            print(f"Number of indicies in shard {len(relative_indices)}")
-            featurizer = CircularFingerprintFeaturizer(self.config, self._file_path,
-                                                       self._protein_map,
-                                                       relative_indices=relative_indices)
-        elif self.config.yaml_config.featurizer_config.name == FeaturizerTypes.MACCS:
-            featurizer = MACCSFingerprintFeaturizer(self.config, self._file_path,
-                                                    self._protein_map,
-                                                    relative_indices=relative_indices)
-        elif self.config.yaml_config.featurizer_config.name == FeaturizerTypes.ENSEMBLE_PREDICTIONS:
-            featurizer = EnsemblePredictionsFeaturizer(self.config, self._file_path,
-                                                       self._protein_map,
-                                                       relative_indices=relative_indices,
-                                                       indices_in_shard=indices_in_shard)
-        else:
-            raise NotImplementedError(f"Fingerprint "
-                                      f"{self.config.yaml_config.featurizer_config.name} "
-                                      f"is not implemented")
-        featurizer.process_pq_row_group(current_index)
-        x, y = featurizer.x, featurizer.y
+        print(f"Number of indices in shard {len(relative_indices)}")
+        self.featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
+        x, y = self.featurizer.x, self.featurizer.y
         print("Fingerprinting time", time.time() - start_time)
         print("Inputting data")
         start_time = time.time()

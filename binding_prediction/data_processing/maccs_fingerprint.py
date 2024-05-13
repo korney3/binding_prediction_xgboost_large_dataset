@@ -10,9 +10,8 @@ from binding_prediction.data_processing.base_featurizer import Featurizer
 
 class MACCSFingerprintFeaturizer(Featurizer):
     def __init__(self, config: Config,
-                 pq_file_path: str, protein_map: tp.Dict[str, int],
-                 relative_indices: tp.List[int] = None):
-        super().__init__(config, pq_file_path, protein_map, relative_indices)
+                 pq_file_path: str):
+        super().__init__(config, pq_file_path)
 
     def featurize(self):
         self._featurize(smiles_to_maccs_fingerprint)
