@@ -103,15 +103,13 @@ class TrainingPipeline:
 
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-            train_featurizer = get_featurizer(self.config, self.config.train_file_path)
-            train_dataset = SmilesIterator(self.config, train_featurizer, self.config.train_file_path,
+
+            train_dataset = SmilesIterator(self.config, self.config.train_file_path,
                                            indicies=train_indices,
                                            shuffle=True)
 
-            val_featurizer = get_featurizer(self.config, self.config.train_file_path)
-            val_dataset = SmilesIterator(self.config, val_featurizer, self.config.train_file_path,
-                                         indicies=val_indices,
-                                         shuffle=True)
+            val_dataset = SmilesIterator(self.config, self.config.train_file_path,
+                                         indicies=val_indices, shuffle=True)
 
             train_Xy = xgboost.DMatrix(train_dataset)
             val_Xy = xgboost.DMatrix(val_dataset)

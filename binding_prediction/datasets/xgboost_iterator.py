@@ -9,14 +9,13 @@ import xgboost
 
 from binding_prediction.config.config import Config
 from binding_prediction.data_processing.base_featurizer import Featurizer
+from binding_prediction.data_processing.utils import get_featurizer
 from binding_prediction.utils import get_indices_in_shard
 
 
 class SmilesIterator(xgboost.DataIter):
-    def __init__(self, config: Config, featurizer: Featurizer, file_path: str,
-                 indicies: List[int] = None, shuffle: bool = True):
+    def __init__(self, config: Config, file_path: str, indicies: List[int] = None, shuffle: bool = True):
         self.config = config
-        self.featurizer = featurizer
 
         self._file_path = file_path
         self._parquet_filename = os.path.basename(file_path)
@@ -54,8 +53,9 @@ class SmilesIterator(xgboost.DataIter):
         if self._it == self._num_shards:
             return 0
         print(f"Number of indices in shard {len(relative_indices)}")
-        self.featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
-        x, y = self.featurizer.x, self.featurizer.y
+        featurizer = get_featurizer(self.config, self._file_path)
+        featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
+        x, y = featurizer.x, featurizer.y
         input_data(data=x, label=y)
         self._it += 1
         return 1

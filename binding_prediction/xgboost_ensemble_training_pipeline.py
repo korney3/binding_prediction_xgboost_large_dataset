@@ -106,13 +106,18 @@ def delete_xgboost_cache():
 
 
 def save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners, parent_logs_dir, rng):
-    all_train_val_indices = np.arange(train_val_pq.metadata.num_rows)
+    weak_learners_train_size = train_val_pq.metadata.num_rows
+    if ensemble_config.yaml_config.training_config.train_size != -1:
+        weak_learners_train_size = train_val_pq.metadata.num_rows - ensemble_config.yaml_config.training_config.train_size
+    all_train_val_indices = np.arange(weak_learners_train_size)
     all_weak_learner_indices = rng.choice(all_train_val_indices, size=(
         num_weak_learners, ensemble_config.yaml_config.model_config.weak_learner_config["train"]["train_size"]),
                                           replace=False)
-    final_ensemble_model_indices = np.setdiff1d(all_train_val_indices, all_weak_learner_indices.flatten())
+    all_indices = np.arange(train_val_pq.metadata.num_rows)
+    final_ensemble_model_indices = np.setdiff1d(all_indices, all_weak_learner_indices.flatten())
     for i in range(num_weak_learners):
-        np.save(os.path.join(parent_logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'), all_weak_learner_indices[i])
+        np.save(os.path.join(parent_logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'),
+                all_weak_learner_indices[i])
     np.save(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'), final_ensemble_model_indices)
 
 

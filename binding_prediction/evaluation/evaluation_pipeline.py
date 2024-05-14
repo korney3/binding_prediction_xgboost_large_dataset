@@ -64,6 +64,7 @@ class EvaluationPipeline:
             if group_df[TARGET_COLUMN].isna().sum() == group_df.shape[0]:
                 break
             _, relative_indices = get_indices_in_shard(self.prediction_indices, group_id, shard_size)
+            group_df = group_df.iloc[relative_indices]
             targets.extend(group_df[TARGET_COLUMN].values)
         if len(targets) == 0:
             print("File for predictions does not contain any targets")
@@ -100,9 +101,7 @@ class EvaluationPipeline:
     def prepare_data(self,):
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-            featurizer = get_featurizer(self.config, self.prediction_pq_file_path)
-            dataset = SmilesIterator(self.config, featurizer, self.prediction_pq_file_path,
-                                     indicies=self.prediction_indices,
+            dataset = SmilesIterator(self.config, self.prediction_pq_file_path, indicies=self.prediction_indices,
                                      shuffle=False)
             dmatrix_Xy = xgboost.DMatrix(dataset)
             return dataset, dmatrix_Xy

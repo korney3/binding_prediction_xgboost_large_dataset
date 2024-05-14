@@ -1,7 +1,8 @@
 from binding_prediction.const import FeaturizerTypes
+from binding_prediction.data_processing.base_featurizer import Featurizer
 
 
-def get_featurizer(config, file_path):
+def get_featurizer(config, file_path) -> Featurizer:
     if config.yaml_config.featurizer_config.name == FeaturizerTypes.CIRCULAR:
         from binding_prediction.data_processing.circular_fingerprint import CircularFingerprintFeaturizer
         featurizer = CircularFingerprintFeaturizer(config, file_path)

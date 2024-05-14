@@ -36,7 +36,7 @@ class Featurizer(ABC):
 
     def process_pq_row_group(self, row_group_number,
                              indices_in_shard: tp.List[int],
-                             relative_indices: tp.List[int] = None):
+                             relative_indices: tp.List[int]):
         self.relative_indices = relative_indices
         self.indices_in_shard = indices_in_shard
         self.prepare_input_smiles(row_group_number)
@@ -44,8 +44,7 @@ class Featurizer(ABC):
     def prepare_input_smiles(self, row_group_number):
         print(f"Processing row group {row_group_number}")
         self.row_group_df = pq.ParquetFile(self.pq_file_path).read_row_group(row_group_number).to_pandas()
-        if self.relative_indices is not None:
-            self.row_group_df = self.row_group_df.iloc[self.relative_indices]
+        self.row_group_df = self.row_group_df.iloc[self.relative_indices]
         for protein in self.row_group_df[PROTEIN_COLUMN]:
             if protein not in self.protein_map:
                 self.protein_map[protein] = len(self.protein_map)
