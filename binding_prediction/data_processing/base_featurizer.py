@@ -43,17 +43,13 @@ class Featurizer(ABC):
 
     def prepare_input_smiles(self, row_group_number):
         print(f"Processing row group {row_group_number}")
-        start_time = time.time()
         self.row_group_df = pq.ParquetFile(self.pq_file_path).read_row_group(row_group_number).to_pandas()
         if self.relative_indices is not None:
             self.row_group_df = self.row_group_df.iloc[self.relative_indices]
-        print(f"Reading time: {time.time() - start_time}")
-        start_time = time.time()
         for protein in self.row_group_df[PROTEIN_COLUMN]:
             if protein not in self.protein_map:
                 self.protein_map[protein] = len(self.protein_map)
             self.proteins_encoded.append(self.protein_map[protein])
-        print(f"Protein encoding time: {time.time() - start_time}")
         self.smiles = self.row_group_df[WHOLE_MOLECULE_COLUMN]
         self.featurize()
 
@@ -62,10 +58,8 @@ class Featurizer(ABC):
         with Pool(8) as p:
             self.x = np.array(p.map(smiles_to_fingerprint, self.smiles))
         print(f"Fingerprinting time: {time.time() - start_time}")
-        start_time = time.time()
         self.add_protein_encoded_feature()
         self.create_target()
-        print(f"Combining time: {time.time() - start_time}")
 
     def add_protein_encoded_feature(self):
         self.x = np.array([self.x[i] + [self.proteins_encoded[i]] for i in range(len(self.x))])

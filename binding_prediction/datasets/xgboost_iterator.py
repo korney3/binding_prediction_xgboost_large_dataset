@@ -42,7 +42,6 @@ class SmilesIterator(xgboost.DataIter):
 
         with open(self.config.protein_map_path, "r") as f:
             self._protein_map = json.load(f)
-        start_time = time.time()
         while True:
             current_index = self._it
 
@@ -57,11 +56,7 @@ class SmilesIterator(xgboost.DataIter):
         print(f"Number of indices in shard {len(relative_indices)}")
         self.featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
         x, y = self.featurizer.x, self.featurizer.y
-        print("Fingerprinting time", time.time() - start_time)
-        print("Inputting data")
-        start_time = time.time()
         input_data(data=x, label=y)
-        print("Inputting time", time.time() - start_time)
         self._it += 1
         return 1
 

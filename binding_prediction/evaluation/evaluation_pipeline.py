@@ -58,38 +58,29 @@ class EvaluationPipeline:
     def calculate_metrics(self, predictions):
         pretty_print_text("Calculating metrics")
         shard_size = self.prediction_pq.metadata.row_group(0).num_rows
-        roc_aucs = []
-        average_precisions = []
-        accuracies = []
-        predictions_start_index = 0
+        targets = []
         for group_id in range(self.prediction_pq.metadata.num_row_groups):
             group_df = self.prediction_pq.read_row_group(group_id).to_pandas()
             if group_df[TARGET_COLUMN].isna().sum() == group_df.shape[0]:
-                continue
-            indices_in_shard, relative_indices = get_indices_in_shard(self.prediction_indices, group_id, shard_size)
-            group_predictions = predictions[predictions_start_index:predictions_start_index + len(relative_indices)]
-            predictions_start_index += len(relative_indices)
-            group_targets = group_df[TARGET_COLUMN].values[relative_indices]
-            roc_aucs.append(roc_auc_score(group_targets, group_predictions))
-            average_precisions.append(average_precision_score(group_targets, group_predictions))
-            accuracies.append(np.mean((group_predictions > 0.5) == group_targets))
-        if len(roc_aucs) == 0:
+                break
+            _, relative_indices = get_indices_in_shard(self.prediction_indices, group_id, shard_size)
+            targets.extend(group_df[TARGET_COLUMN].values)
+        if len(targets) == 0:
             print("File for predictions does not contain any targets")
             return None, None, None
 
-        roc_auc = np.mean(roc_aucs)
-        average_precision = np.mean(average_precisions)
-        accuracy = np.mean(accuracies)
+        roc_auc = roc_auc_score(targets, predictions)
+        average_precision = average_precision_score(targets, predictions)
+        accuracy = np.mean((predictions > 0.5) == targets)
         prediction_file_name = os.path.basename(self.prediction_pq_file_path).split('.')[0]
         print(f"Metrics for {prediction_file_name}")
         print(f"ROC AUC: {roc_auc}")
         print(f"Average precision: {average_precision}")
         print(f"Accuracy: {accuracy}")
         metrics = pd.DataFrame({
-            'group_id': list(range(self.prediction_pq.metadata.num_row_groups)),
-            'roc_auc': roc_aucs,
-            'average_precision': average_precisions,
-            'accuracy': accuracies
+            'roc_auc': [roc_auc],
+            'average_precision': [average_precision],
+            'accuracy': [accuracy]
         })
 
         metrics.to_csv(os.path.join(self.config.logs_dir, f'{prediction_file_name}_metrics.csv'), index=False)
