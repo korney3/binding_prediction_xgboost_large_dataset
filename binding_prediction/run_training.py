@@ -1,15 +1,6 @@
 import argparse
-import os
-import time
 
-import numpy as np
-import pyarrow.parquet as pq
-
-from binding_prediction.config.config import create_config
-from binding_prediction.evaluation.utils import evaluate_test_set, evaluate_validation_set
 from binding_prediction.runner import Runner
-from binding_prediction.training.training_pipeline import TrainingPipeline
-from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
 
 
 def parse_args():
