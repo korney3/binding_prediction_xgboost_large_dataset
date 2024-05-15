@@ -61,7 +61,7 @@ class SmilesIterator(xgboost.DataIter):
 
         if self._it == self._num_shards:
             return 0
-        print(f"Number of indices in shard {len(relative_indices)}")
+        self.logger.debug(f"Number of indices in shard {len(relative_indices)}")
         featurizer = get_featurizer(self.config, self._file_path, self.logger)
         featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
         x, y = featurizer.x, featurizer.y
