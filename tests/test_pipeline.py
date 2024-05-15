@@ -39,7 +39,7 @@ class TestPipeline:
         assert neg_samples == 1500
         assert pos_samples == 789
 
-    @pytest.mark.parametrize("config_filename", XGBOOST_ENSEMBLE_MODELS_CONFIGS)  # + XGBOOST_MODELS_CONFIGS)
+    @pytest.mark.parametrize("config_filename", XGBOOST_ENSEMBLE_MODELS_CONFIGS + XGBOOST_MODELS_CONFIGS)
     def test_xgboost_training_pipeline(self, config_filename):
         with tempfile.TemporaryDirectory() as tmp_dir:
             if config_filename in XGBOOST_MODELS_CONFIGS:

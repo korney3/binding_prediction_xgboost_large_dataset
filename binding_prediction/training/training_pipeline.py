@@ -4,14 +4,12 @@ import numpy as np
 import pyarrow.parquet as pq
 import xgboost
 
-import binding_prediction.runner
-import binding_prediction.training.utils
 from binding_prediction.config.config import Config
+from binding_prediction.const import ModelTypes
 from binding_prediction.const import TARGET_COLUMN
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.models.xgboost_model import XGBoostModel
 from binding_prediction.utils import timing_decorator, pretty_print_text, save_config
-from binding_prediction.const import ModelTypes
 
 
 class TrainingPipeline:
