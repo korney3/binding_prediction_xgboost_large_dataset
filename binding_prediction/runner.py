@@ -54,7 +54,7 @@ def train_and_evaluate(config: Config, config_path: str, debug: bool = False,
             weak_train_val_indices = np.load(os.path.join(config.logs_dir,
                                                      f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'))
             logs_dir = os.path.join(config.logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}')
-
+            os.makedirs(logs_dir, exist_ok=True)
             with open(config_path, 'r') as file:
                 weak_learner_config_dict = yaml.safe_load(file)["model"]["weak_learner_config"]
                 weak_learner_config = get_config(config.train_file_path,

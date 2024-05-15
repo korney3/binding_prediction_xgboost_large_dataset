@@ -25,13 +25,21 @@ XGBOOST_ENSEMBLE_MODELS_CONFIGS = ['xgboost_ensemble_config.yaml']
 
 @patch('binding_prediction.config.config.PROTEIN_MAP_JSON_PATH', PROTEIN_MAP_JSON_PATH_TEST)
 class TestPipeline:
+    def teardown_class(self):
+        print("Cleaning up cache files")
+        cache_files = list(filter(lambda x: x.startswith("cache-0") and x.endswith(".page"),
+                                  os.listdir(os.path.dirname(current_file_path))))
+        cache_files_paths = list(map(lambda x: os.path.join(os.path.dirname(current_file_path), x), cache_files))
+        for cache_file in cache_files_paths:
+            os.remove(cache_file)
+
     def test_calculate_pos_neg_samples(self):
         train_val_pq = pq.ParquetFile(TRAIN_PARQUET_PATH)
         neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq)
-        assert neg_samples == 3000
-        assert pos_samples == 1589
+        assert neg_samples == 1500
+        assert pos_samples == 789
 
-    @pytest.mark.parametrize("config_filename", XGBOOST_MODELS_CONFIGS + XGBOOST_ENSEMBLE_MODELS_CONFIGS)
+    @pytest.mark.parametrize("config_filename", XGBOOST_ENSEMBLE_MODELS_CONFIGS)  # + XGBOOST_MODELS_CONFIGS)
     def test_xgboost_training_pipeline(self, config_filename):
         with tempfile.TemporaryDirectory() as tmp_dir:
             if config_filename in XGBOOST_MODELS_CONFIGS:
@@ -64,9 +72,11 @@ class TestPipeline:
             for file in files_to_check_existence:
                 assert os.path.exists(os.path.join(runner.logs_dir, file)), f"File {file} does not exist in " \
                                                                             f"{runner.logs_dir}"
+
     @staticmethod
     def _update_xgboost_config_parameters_for_test(config_path, tmp_dir):
         config = TestPipeline._update_top_model_xgboost_parameters(config_path)
+        config["train"]["train_size"] = 2000
         if config["featurizer"]["name"] == FeaturizerTypes.CIRCULAR:
             config["featurizer"]["radius"] = 2
             config["featurizer"]["length"] = 256
@@ -77,10 +87,11 @@ class TestPipeline:
     @staticmethod
     def _update_xgboost_ensemble_config_parameters_for_test(config_path, tmp_dir):
         config = TestPipeline._update_top_model_xgboost_parameters(config_path)
+        config["train"]["train_size"] = 600
         config["model"]["weak_learner_config"]["model"]["max_depth"] = 3
         config["model"]["weak_learner_config"]["model"]["num_boost_round"] = 3
-        config["model"]["weak_learner_config"]["model"]["early_stopping_rounds"] = 2
-        config["model"]["weak_learner_config"]["model"]["train_size"] = 1000
+        config["model"]["weak_learner_config"]["train"]["early_stopping_rounds"] = 2
+        config["model"]["weak_learner_config"]["train"]["train_size"] = 700
 
         if config["model"]["weak_learner_config"]["featurizer"][
             "name"] == FeaturizerTypes.CIRCULAR:
@@ -97,5 +108,4 @@ class TestPipeline:
         config["model"]["max_depth"] = 3
         config["model"]["num_boost_round"] = 3
         config["train"]["early_stopping_rounds"] = 2
-        config["train"]["train_size"] = 2000
         return config

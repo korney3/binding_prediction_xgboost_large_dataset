@@ -29,9 +29,8 @@ class EnsemblePredictionsFeaturizer(Featurizer):
         parent_logs_dir = self.config.logs_dir
         features = np.zeros((len(self.indices_in_shard), num_weak_learners))
         for i in range(num_weak_learners):
-            weak_learner_config_raw = load_config(
+            weak_learner_config = load_config(
                 os.path.join(parent_logs_dir, f"{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}"))
-            weak_learner_config = Config(**weak_learner_config_raw)
 
             predictions = get_predictions(weak_learner_config, self.pq_file_path, self.indices_in_shard)
             features[:, i] = predictions
