@@ -1,4 +1,7 @@
+import logging
 import os
+import typing as tp
+from logging import Logger
 
 import numpy as np
 import pandas as pd
@@ -9,7 +12,6 @@ from sklearn.metrics import roc_auc_score, average_precision_score
 from binding_prediction.config.config import Config
 from binding_prediction.const import ModelTypes
 from binding_prediction.const import TARGET_COLUMN
-from binding_prediction.data_processing.utils import get_featurizer
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
 from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
@@ -21,8 +23,15 @@ class EvaluationPipeline:
                  prediction_pq_file_path: str,
                  debug: bool = False,
                  rng: np.random.Generator = np.random.default_rng(seed=42),
-                 prediction_indices=None):
+                 prediction_indices=None,
+                 logger: tp.Optional[Logger] = None):
         self.config = config
+
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name=__name__)
+            self.logger.setLevel(logging.INFO)
 
         self.debug = debug
         self.rng = rng
@@ -67,17 +76,17 @@ class EvaluationPipeline:
             group_df = group_df.iloc[relative_indices]
             targets.extend(group_df[TARGET_COLUMN].values)
         if len(targets) == 0:
-            print("File for predictions does not contain any targets")
+            self.logger.warning("File for predictions does not contain any targets")
             return None, None, None
 
         roc_auc = roc_auc_score(targets, predictions)
         average_precision = average_precision_score(targets, predictions)
         accuracy = np.mean((predictions > 0.5) == targets)
         prediction_file_name = os.path.basename(self.prediction_pq_file_path).split('.')[0]
-        print(f"Metrics for {prediction_file_name}")
-        print(f"ROC AUC: {roc_auc}")
-        print(f"Average precision: {average_precision}")
-        print(f"Accuracy: {accuracy}")
+        self.logger.info(f"Metrics for {prediction_file_name}")
+        self.logger.info(f"ROC AUC: {roc_auc}")
+        self.logger.info(f"Average precision: {average_precision}")
+        self.logger.info(f"Accuracy: {accuracy}")
         metrics = pd.DataFrame({
             'roc_auc': [roc_auc],
             'average_precision': [average_precision],
@@ -94,15 +103,17 @@ class EvaluationPipeline:
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             test_dataset, test_Xy = self.prepare_data()
             get_submission_test_predictions_for_xgboost_model(test_dataset, test_Xy,
-                                                              self.model, self.config.logs_dir)
+                                                              self.model, self.config.logs_dir,
+                                                              logger=self.logger)
         else:
             raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
 
     def prepare_data(self,):
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
-            dataset = SmilesIterator(self.config, self.prediction_pq_file_path, indicies=self.prediction_indices,
-                                     shuffle=False)
+            dataset = SmilesIterator(self.config, self.prediction_pq_file_path,
+                                     indicies=self.prediction_indices,
+                                     shuffle=False, logger=self.logger)
             dmatrix_Xy = xgboost.DMatrix(dataset)
             return dataset, dmatrix_Xy
         else:

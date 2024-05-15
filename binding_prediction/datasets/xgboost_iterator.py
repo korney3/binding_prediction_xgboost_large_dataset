@@ -1,21 +1,29 @@
 import json
+import logging
 import os
-import time
-from typing import Callable, List
+from logging import Logger
+from typing import Callable, List, Optional
 
 import numpy as np
 import pyarrow.parquet as pq
 import xgboost
 
 from binding_prediction.config.config import Config
-from binding_prediction.data_processing.base_featurizer import Featurizer
 from binding_prediction.data_processing.utils import get_featurizer
 from binding_prediction.utils import get_indices_in_shard
 
 
 class SmilesIterator(xgboost.DataIter):
-    def __init__(self, config: Config, file_path: str, indicies: List[int] = None, shuffle: bool = True):
+    def __init__(self, config: Config,
+                 file_path: str, indicies: List[int] = None,
+                 shuffle: bool = True, logger: Optional[Logger] = None):
         self.config = config
+
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name=__name__)
+            self.logger.setLevel(logging.INFO)
 
         self._file_path = file_path
         self._parquet_filename = os.path.basename(file_path)
@@ -44,8 +52,9 @@ class SmilesIterator(xgboost.DataIter):
         while True:
             current_index = self._it
 
-            print("Reading row group", current_index)
-            indices_in_shard, relative_indices = get_indices_in_shard(self._shuffled_indices, current_index, self.shard_size)
+            self.logger.debug("Reading row group", current_index)
+            indices_in_shard, relative_indices = get_indices_in_shard(self._shuffled_indices, current_index,
+                                                                      self.shard_size)
             if len(relative_indices) > 0 or self._it == self._num_shards:
                 break
             self._it += 1
@@ -53,7 +62,7 @@ class SmilesIterator(xgboost.DataIter):
         if self._it == self._num_shards:
             return 0
         print(f"Number of indices in shard {len(relative_indices)}")
-        featurizer = get_featurizer(self.config, self._file_path)
+        featurizer = get_featurizer(self.config, self._file_path, self.logger)
         featurizer.process_pq_row_group(current_index, indices_in_shard, relative_indices)
         x, y = featurizer.x, featurizer.y
         input_data(data=x, label=y)

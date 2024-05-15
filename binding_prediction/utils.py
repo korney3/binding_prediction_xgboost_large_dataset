@@ -46,7 +46,9 @@ def timing_decorator(func):
 
 
 def pretty_print_text(text):
-    print(f"{'=' * len(text)}\n{text.upper()}\n{'=' * len(text)}")
+    pretty_text = f"{'=' * len(text)}\n{text.upper()}\n{'=' * len(text)}"
+    print(pretty_text)
+    return pretty_text
 
 
 def save_config(config):

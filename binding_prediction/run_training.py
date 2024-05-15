@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 from binding_prediction.runner import Runner
 
@@ -18,7 +19,8 @@ def main():
 
     runner = Runner(train_parquet_path=args.input_parquet,
                     test_parquet_path=args.test_parquet,
-                    config_path=args.config_path, debug=args.debug,
+                    config_path=args.config_path,
+                    debug=args.debug,
                     logs_dir_location="logs", seed=42)
     runner.run()
 

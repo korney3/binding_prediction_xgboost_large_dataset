@@ -1,7 +1,9 @@
 import json
+import logging
 import time
 import typing as tp
 from abc import ABC
+from logging import Logger
 from multiprocessing import Pool
 
 import numpy as np
@@ -13,10 +15,17 @@ from binding_prediction.const import TARGET_COLUMN
 
 
 class Featurizer(ABC):
-    def __init__(self, config: Config, pq_file_path: str):
+    def __init__(self, config: Config, pq_file_path: str,
+                 logger: tp.Optional[Logger] = None):
 
         self.featurizer_config = config.yaml_config.featurizer_config
         self.pq_file_path = pq_file_path
+
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name=__name__)
+            self.logger.setLevel(logging.INFO)
 
         with open(config.protein_map_path, "r") as f:
             self.protein_map = json.load(f)
@@ -42,7 +51,7 @@ class Featurizer(ABC):
         self.prepare_input_smiles(row_group_number)
 
     def prepare_input_smiles(self, row_group_number):
-        print(f"Processing row group {row_group_number}")
+        self.logger.debug(f"Processing row group {row_group_number}")
         self.row_group_df = pq.ParquetFile(self.pq_file_path).read_row_group(row_group_number).to_pandas()
         self.row_group_df = self.row_group_df.iloc[self.relative_indices]
         for protein in self.row_group_df[PROTEIN_COLUMN]:
@@ -56,7 +65,7 @@ class Featurizer(ABC):
         start_time = time.time()
         with Pool(8) as p:
             self.x = np.array(p.map(smiles_to_fingerprint, self.smiles))
-        print(f"Fingerprinting time: {time.time() - start_time}")
+        self.logger.debug(f"Fingerprinting time: {time.time() - start_time}")
         self.add_protein_encoded_feature()
         self.create_target()
 

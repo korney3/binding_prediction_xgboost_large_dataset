@@ -1,4 +1,6 @@
+import logging
 import os
+from logging import Logger
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -16,9 +18,16 @@ class TrainingPipeline:
     def __init__(self, config: Config,
                  debug: bool = False,
                  rng: np.random.Generator = np.random.default_rng(seed=42),
-                 train_val_indices=None):
+                 train_val_indices=None,
+                 logger: Logger = None):
         self.config = config
         save_config(self.config)
+
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name=__name__)
+            self.logger.setLevel(logging.INFO)
 
         self.debug = debug
         self.rng = rng
@@ -58,7 +67,7 @@ class TrainingPipeline:
         train_size = len(self.train_val_indices)
         if self.debug:
             train_size = 50000
-            print(f"DEBUG MODE: Using only {train_size} samples for training")
+            self.logger.warning(f"DEBUG MODE: Using only {train_size} samples for training")
             self.train_val_indices = self.rng.choice(self.train_val_indices,
                                                      train_size,
                                                      replace=False)
@@ -71,10 +80,10 @@ class TrainingPipeline:
         if (0 <
                 self.config.yaml_config.training_config.target_scale_pos_weight <
                 self.config.neg_samples / self.config.pos_samples):
-            pretty_print_text("Adding positive samples to training set")
+            self.logger.info("Adding positive samples to training set")
             pos_samples_indices = self.sample_positive_indexes_to_add_to_train(self.train_val_pq,
                                                                                self.train_val_indices)
-            print(f"Got {len(pos_samples_indices)} indices")
+            self.logger.info(f"Got {len(pos_samples_indices)} indices")
             self.train_val_indices = np.concatenate([self.train_val_indices, pos_samples_indices])
             self.train_val_indices = self.rng.permutation(self.train_val_indices)
 
@@ -90,10 +99,10 @@ class TrainingPipeline:
 
             train_dataset = SmilesIterator(self.config, self.config.train_file_path,
                                            indicies=train_indices,
-                                           shuffle=True)
+                                           shuffle=True, logger=self.logger)
 
             val_dataset = SmilesIterator(self.config, self.config.train_file_path,
-                                         indicies=val_indices, shuffle=True)
+                                         indicies=val_indices, shuffle=True, logger=self.logger)
 
             train_Xy = xgboost.DMatrix(train_dataset)
             val_Xy = xgboost.DMatrix(val_dataset)
@@ -111,13 +120,13 @@ class TrainingPipeline:
             pos_samples_indexes.extend([x + last_index for x in row_group[row_group[TARGET_COLUMN] == 1].index])
             last_index += group_size
         pos_samples_indexes = np.array(pos_samples_indexes)
-        print(f"Got {len(pos_samples_indexes)} positive samples")
+        self.logger.debug(f"Got {len(pos_samples_indexes)} positive samples")
         pos_samples_to_sample = int(
             self.config.neg_samples / self.config.yaml_config.training_config.target_scale_pos_weight - self.config.pos_samples)
-        print(f"Sampling {pos_samples_to_sample} positive samples")
+        self.logger.debug(f"Sampling {pos_samples_to_sample} positive samples")
         pos_samples = self.rng.choice(pos_samples_indexes, pos_samples_to_sample, replace=False)
         pos_samples_not_in_train_val = np.setdiff1d(pos_samples, train_val_indices)
-        print(f"Got {len(pos_samples_not_in_train_val)} positive samples not in validation set")
+        self.logger.debug(f"Got {len(pos_samples_not_in_train_val)} positive samples not in validation set")
         if self.debug:
             pos_samples_not_in_train_val = pos_samples_not_in_train_val[:10000]
         return pos_samples_not_in_train_val

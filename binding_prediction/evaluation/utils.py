@@ -1,24 +1,28 @@
 import os
-
+from logging import Logger
+import typing as tp
 import numpy as np
 
 from binding_prediction.evaluation.evaluation_pipeline import EvaluationPipeline
 from binding_prediction.utils import pretty_print_text
 
 
-def evaluate_test_set(config, pq_file_path, debug):
+def evaluate_test_set(config, pq_file_path, debug,
+                      logger: tp.Optional[Logger] = None):
     pretty_print_text("Get test predictions")
     test_evaluation_pipeline = EvaluationPipeline(config, prediction_pq_file_path=pq_file_path,
-                                                  debug=debug)
+                                                  debug=debug, logger=logger)
     test_evaluation_pipeline.create_kaggle_submission_file()
 
 
-def evaluate_validation_set(config, pq_file_path, debug):
+def evaluate_validation_set(config, pq_file_path, debug,
+                            logger: tp.Optional[Logger] = None):
     pretty_print_text("Get validation metrics")
     with open(os.path.join(config.logs_dir, 'val_indices.npy'), 'rb') as f:
         validation_indices = np.load(f)
     val_evaluation_pipeline = EvaluationPipeline(config, prediction_pq_file_path=pq_file_path,
-                                                 debug=debug, prediction_indices=validation_indices)
+                                                 debug=debug, prediction_indices=validation_indices,
+                                                 logger=logger)
     predictions = val_evaluation_pipeline.run()
     val_evaluation_pipeline.calculate_metrics(predictions)
 

@@ -1,4 +1,6 @@
+import logging
 import os
+from logging import Logger
 
 import numpy as np
 import typing as tp
@@ -19,7 +21,8 @@ class Runner:
                  config_path: str,
                  debug: bool = False,
                  logs_dir_location: str = 'logs',
-                 seed: int = 42):
+                 seed: int = 42,
+                 log_level: int = logging.INFO):
         self.seed = seed
         self.logs_dir_location = logs_dir_location
         self.debug = debug
@@ -29,6 +32,9 @@ class Runner:
 
         self.rng = np.random.default_rng(seed=seed)
         self.logs_dir = None
+
+        self.logger = logging.getLogger(name=__name__)
+        self.logger.setLevel(log_level)
 
     def run(self):
         self.logs_dir = create_logs_dir(self.logs_dir_location)
@@ -41,17 +47,18 @@ class Runner:
             save_weak_learners_data_indices(self.train_parquet_path, config,
                                             self.logs_dir, self.rng)
 
-        train_and_evaluate(config, self.config_path, self.debug, self.rng)
+        train_and_evaluate(config, self.config_path, self.debug, self.rng, logger=self.logger)
 
 
 def train_and_evaluate(config: Config, config_path: str, debug: bool = False,
                        rng: np.random.Generator = np.random.default_rng(seed=42),
-                       train_val_indices: tp.Optional[list[int]] = None):
+                       train_val_indices: tp.Optional[list[int]] = None,
+                       logger: tp.Optional[Logger] = None):
     if config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE:
         for i in range(config.yaml_config.model_config.num_weak_learners):
             pretty_print_text(f"Training weak learner {i}")
             weak_train_val_indices = np.load(os.path.join(config.logs_dir,
-                                                     f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'))
+                                                          f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'))
             logs_dir = os.path.join(config.logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}')
             os.makedirs(logs_dir, exist_ok=True)
             with open(config_path, 'r') as file:
@@ -68,7 +75,10 @@ def train_and_evaluate(config: Config, config_path: str, debug: bool = False,
     training_pipeline = TrainingPipeline(config,
                                          debug=debug,
                                          rng=rng,
-                                         train_val_indices=train_val_indices)
+                                         train_val_indices=train_val_indices,
+                                         logger=logger)
     training_pipeline.run()
-    evaluate_validation_set(config, config.train_file_path, debug)
-    evaluate_test_set(config, config.test_file_path, debug)
+    evaluate_validation_set(config, config.train_file_path, debug,
+                            logger=logger)
+    evaluate_test_set(config, config.test_file_path, debug,
+                      logger=logger)

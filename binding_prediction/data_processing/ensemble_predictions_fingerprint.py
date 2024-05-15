@@ -1,6 +1,7 @@
 import os.path
 import time
-
+from logging import Logger
+import typing as tp
 import numpy as np
 
 from binding_prediction.config.config import Config
@@ -12,17 +13,17 @@ from binding_prediction.utils import load_config
 
 class EnsemblePredictionsFeaturizer(Featurizer):
     def __init__(self, config: Config,
-                 pq_file_path: str):
-        super().__init__(config, pq_file_path)
+                 pq_file_path: str, logger: tp.Optional[Logger] = None):
+        super().__init__(config, pq_file_path, logger=logger)
         self.config = config
 
     def featurize(self):
         start_time = time.time()
         self.x = self.smiles_to_predictions_fingerprint()
-        print(f"Fingerprinting time: {time.time() - start_time}")
+        self.logger.debug(f"Fingerprinting time: {time.time() - start_time}")
         start_time = time.time()
         self.create_target()
-        print(f"Combining time: {time.time() - start_time}")
+        self.logger.debug(f"Combining time: {time.time() - start_time}")
 
     def smiles_to_predictions_fingerprint(self):
         num_weak_learners = self.config.yaml_config.model_config.num_weak_learners
