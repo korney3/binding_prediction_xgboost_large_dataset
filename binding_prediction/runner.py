@@ -10,8 +10,7 @@ from binding_prediction.const import ModelTypes, WEAK_LEARNER_ARTIFACTS_NAME_PRE
 from binding_prediction.evaluation.utils import evaluate_validation_set, evaluate_test_set
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import create_logs_dir, pretty_print_text, \
-    get_config
-from binding_prediction.xgboost_ensemble_training_pipeline import save_weak_learners_data_indices
+    get_config, save_weak_learners_data_indices
 
 
 class Runner:

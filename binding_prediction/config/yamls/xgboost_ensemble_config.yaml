@@ -15,9 +15,10 @@ model:
       colsample_bytree: 0.6
       num_boost_round: 100
       alpha: 0.05
+      device: 'cpu'
     train:
       early_stopping_rounds: 5
-      train_size: 260000
+      train_size: 26000000
     featurizer:
       name: 'circular_fingerprint'
       radius: 3
@@ -36,6 +37,7 @@ model:
   alpha: 0.05
 train:
   early_stopping_rounds: 5
-  train_size: 260000
+  train_size: 26000000
+  device: 'cpu'
 featurizer:
   name: 'ensemble_predictions'

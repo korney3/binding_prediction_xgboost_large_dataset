@@ -12,6 +12,7 @@ model:
   colsample_bytree: 0.6
   num_boost_round: 100
   alpha: 0.05
+  device: 'cpu'
 train:
   early_stopping_rounds:  5
   train_size: 26000000
