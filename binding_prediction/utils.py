@@ -1,13 +1,15 @@
+import logging
 import os
 import time
 import typing as tp
+from logging import Logger
 
 import numpy as np
 import yaml
 from pyarrow import parquet as pq
 
 from binding_prediction.config.config import Config, create_config
-from binding_prediction.const import ModelTypes, WEAK_LEARNER_ARTIFACTS_NAME_PREFIX
+from binding_prediction.const import ModelTypes, WEAK_LEARNER_ARTIFACTS_NAME_PREFIX, DEFAULT_NUM_WEAK_LEARNERS
 
 
 def get_indices_in_shard(indices, current_shard_num, shard_size):
@@ -72,6 +74,7 @@ def create_logs_dir(logs_dir_location: str = 'logs') -> str:
 def get_config(train_parquet_path: str, test_parquet_path: str,
                config_obj: tp.Union[str, dict], logs_dir: str,
                train_val_indices: tp.Optional[list] = None) -> Config:
+
     train_val_pq = pq.ParquetFile(train_parquet_path)
     neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq, indices=train_val_indices)
 
@@ -82,8 +85,16 @@ def get_config(train_parquet_path: str, test_parquet_path: str,
         weak_learners_train_size = train_val_pq.metadata.num_rows
         if config.yaml_config.training_config.train_size != -1:
             weak_learners_train_size = train_val_pq.metadata.num_rows - config.yaml_config.training_config.train_size
+            if weak_learners_train_size <= 0:
+                raise ValueError(f"Train size of ensemble model is too large, "
+                                 f"cannot split data to train multiple weak learners and ensemble model. "
+                                 f"Decrease train_size of ensemble model")
         num_weak_learners = (weak_learners_train_size //
                              config.yaml_config.model_config.weak_learner_config["train"]["train_size"])
+        if num_weak_learners == 0:
+            raise ValueError(f"Train size of weak learner is too large, cannot create multiple weak learners"
+                             f"Decrease train_size of weak learner")
+
         config.yaml_config.model_config.num_weak_learners = num_weak_learners
     return config
 

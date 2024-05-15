@@ -11,14 +11,15 @@ class TrainingConfig:
     train_size: int = -1
 
 
-def load_training_config_from_yaml_path(yaml_path: str) -> TrainingConfig:
+def load_training_config_from_yaml_path(yaml_path: str, max_train_size: int) -> TrainingConfig:
     with open(yaml_path, 'r') as file:
         config = yaml.safe_load(file)
-    return create_training_config_from_dict(config)
+    return create_training_config_from_dict(config, max_train_size)
 
 
-def create_training_config_from_dict(config: dict) -> TrainingConfig:
+def create_training_config_from_dict(config: dict, max_train_size: int) -> TrainingConfig:
     training_config_dict = config["train"]
+    training_config_dict["train_size"] = min(max_train_size, training_config_dict["train_size"])
     config = TrainingConfig(**training_config_dict)
     return config
 

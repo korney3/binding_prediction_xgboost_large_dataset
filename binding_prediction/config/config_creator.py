@@ -65,9 +65,11 @@ def get_featurizer_config(config: tp.Union[str, dict], featurizer_name):
     return featurizer_config
 
 
-def get_training_config(config: tp.Union[str, dict]):
-    training_config_creator = ConfigCreator(config, load_training_config_from_yaml_path,
-                                            create_training_config_from_dict)
+def get_training_config(config: tp.Union[str, dict], max_train_size: int):
+    yaml_func = partial(load_training_config_from_yaml_path, max_train_size=max_train_size)
+    dict_func = partial(create_training_config_from_dict, max_train_size=max_train_size)
+    training_config_creator = ConfigCreator(config, yaml_func,
+                                            dict_func)
     config = training_config_creator.create()
     return config
 

@@ -1,7 +1,8 @@
 import typing as tp
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import yaml
+import pyarrow.parquet as pq
 
 from binding_prediction.config.config_creator import get_model_config, get_featurizer_config, \
     get_training_config
@@ -40,7 +41,8 @@ def create_config(train_file_path: str, test_file_path: str,
     featurizer_config = get_featurizer_config(config, featurizer_name)
     model_config = get_model_config(config, model_name, neg_samples, pos_samples)
 
-    training_config = get_training_config(config)
+    max_train_size = pq.ParquetFile(train_file_path).metadata.num_rows
+    training_config = get_training_config(config, max_train_size)
     config = Config(train_file_path=train_file_path, test_file_path=test_file_path, logs_dir=logs_dir,
                     neg_samples=neg_samples, pos_samples=pos_samples,
                     yaml_config=YamlConfig(featurizer_config=featurizer_config,
