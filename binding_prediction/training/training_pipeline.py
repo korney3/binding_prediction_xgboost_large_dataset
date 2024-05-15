@@ -3,15 +3,12 @@ import os
 import numpy as np
 import pyarrow.parquet as pq
 import xgboost
-import yaml
 
 from binding_prediction.config.config import Config
-from binding_prediction.const import TARGET_COLUMN, PROTEIN_MAP_JSON_PATH
-from binding_prediction.data_processing.utils import get_featurizer
+from binding_prediction.const import TARGET_COLUMN
 from binding_prediction.datasets.xgboost_iterator import SmilesIterator
-from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
 from binding_prediction.models.xgboost_model import XGBoostModel
-from binding_prediction.utils import timing_decorator, pretty_print_text
+from binding_prediction.utils import timing_decorator, pretty_print_text, save_config
 from binding_prediction.const import ModelTypes
 
 
@@ -21,7 +18,7 @@ class TrainingPipeline:
                  rng: np.random.Generator = np.random.default_rng(seed=42),
                  train_val_indices=None):
         self.config = config
-        self.save_config()
+        save_config(self.config)
 
         self.debug = debug
         self.rng = rng
@@ -30,7 +27,6 @@ class TrainingPipeline:
 
         self.train_val_pq = pq.ParquetFile(self.config.train_file_path)
         if train_val_indices is not None:
-            assert self.config.yaml_config.training_config.pq_groups_numbers is None
             self.train_val_indices = train_val_indices
         else:
             self.train_val_indices = np.arange(self.train_val_pq.metadata.num_rows)
@@ -39,15 +35,11 @@ class TrainingPipeline:
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             train_Xy, val_Xy = self.prepare_train_val_data()
-            self.save_config()
+            save_config(self.config)
             self.model = XGBoostModel(self.config)
             self.train(train_Xy, val_Xy)
         else:
             raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
-
-    def save_config(self):
-        with open(os.path.join(self.config.logs_dir, 'config.yaml'), 'w') as file:
-            yaml.dump(self.config.__dict__, file)
 
     @timing_decorator
     def train(self, train_dataset, val_dataset):
@@ -70,16 +62,6 @@ class TrainingPipeline:
             self.train_val_indices = self.rng.choice(self.train_val_indices,
                                                      train_size,
                                                      replace=False)
-        else:
-            if self.config.yaml_config.training_config.pq_groups_numbers is not None:
-                train_size = 0
-                self.train_val_indices = []
-                shard_size = self.train_val_pq.metadata.row_group(0).num_rows
-                for group_number in self.config.yaml_config.training_config.pq_groups_numbers:
-                    train_size += self.train_val_pq.metadata.row_group(group_number).num_rows
-                    start_index = shard_size * group_number
-                    self.train_val_indices.extend(
-                        range(start_index, start_index + self.train_val_pq.metadata.row_group(group_number).num_rows))
 
         if self.config.yaml_config.training_config.train_size != -1 and self.config.yaml_config.training_config.train_size < train_size:
             self.train_val_indices = self.rng.choice(self.train_val_indices,

@@ -1,6 +1,10 @@
+import os
 import time
 
 import numpy as np
+import yaml
+
+from binding_prediction.config.config import Config
 
 
 def get_indices_in_shard(indices, current_shard_num, shard_size):
@@ -12,14 +16,11 @@ def get_indices_in_shard(indices, current_shard_num, shard_size):
 
 
 def calculate_number_of_neg_and_pos_samples(pq_file,
-                                            pq_groups_numbers=None,
                                             indices=None):
     neg_samples = 0
     pos_samples = 0
-    if pq_groups_numbers is None:
-        pq_groups_numbers = range(pq_file.metadata.num_row_groups)
     shard_size = pq_file.metadata.row_group(0).num_rows
-    for group_id in pq_groups_numbers:
+    for group_id in range(pq_file.metadata.num_row_groups):
         group_df = pq_file.read_row_group(group_id).to_pandas()
         if indices is not None:
             _, relative_indices = get_indices_in_shard(indices, group_id, shard_size)
@@ -43,3 +44,14 @@ def timing_decorator(func):
 
 def pretty_print_text(text):
     print(f"{'=' * len(text)}\n{text.upper()}\n{'=' * len(text)}")
+
+
+def save_config(config):
+    with open(os.path.join(config.logs_dir, 'config.yaml'), 'w') as file:
+        yaml.dump(config, file)
+
+
+def load_config(logs_dir) -> Config:
+    with open(os.path.join(logs_dir, "config.yaml"), "r") as file:
+        config = yaml.load(file, Loader=yaml.SafeLoader)
+    return config

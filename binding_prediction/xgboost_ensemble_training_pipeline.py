@@ -35,16 +35,7 @@ def main():
     rng = np.random.default_rng(seed=42)
 
     train_val_pq = pq.ParquetFile(args.input_parquet)
-
-    with open(args.config_path, 'r') as file:
-        train_config_dict = yaml.safe_load(file)["train"]
-    if "pq_groups_numbers" in train_config_dict and train_config_dict["pq_groups_numbers"] is not None:
-        pq_groups_numbers = sorted(train_config_dict["pq_groups_numbers"])
-        pq_groups_numbers = list(filter(lambda x: x < train_val_pq.num_row_groups, pq_groups_numbers))
-    else:
-        pq_groups_numbers = None
-
-    neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq, pq_groups_numbers)
+    neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq)
 
     ensemble_config = create_config(train_file_path=args.input_parquet, test_file_path=args.test_parquet,
                                     logs_dir=parent_logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
