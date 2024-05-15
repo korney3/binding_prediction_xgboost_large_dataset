@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import typing as tp
-import pyarrow.parquet as pq
+from dataclasses import dataclass, field
+
 import yaml
 
 from binding_prediction.config.config_creator import get_model_config, get_featurizer_config, \
@@ -21,7 +21,7 @@ class Config:
     neg_samples: int
     pos_samples: int
     yaml_config: YamlConfig
-    protein_map_path: str = PROTEIN_MAP_JSON_PATH
+    protein_map_path: str
 
 
 def create_config(train_file_path: str, test_file_path: str,
@@ -41,11 +41,13 @@ def create_config(train_file_path: str, test_file_path: str,
     model_config = get_model_config(config, model_name, neg_samples, pos_samples)
 
     training_config = get_training_config(config)
-    return Config(train_file_path=train_file_path, test_file_path=test_file_path, logs_dir=logs_dir,
-                  neg_samples=neg_samples, pos_samples=pos_samples,
-                  yaml_config=YamlConfig(featurizer_config=featurizer_config,
-                                         model_config=model_config,
-                                         training_config=training_config))
+    config = Config(train_file_path=train_file_path, test_file_path=test_file_path, logs_dir=logs_dir,
+                    neg_samples=neg_samples, pos_samples=pos_samples,
+                    yaml_config=YamlConfig(featurizer_config=featurizer_config,
+                                           model_config=model_config,
+                                           training_config=training_config),
+                    protein_map_path=PROTEIN_MAP_JSON_PATH)
+    return config
 
 
 def construct_config_dataclass(loader, node, dataclass_type: tp.Type):

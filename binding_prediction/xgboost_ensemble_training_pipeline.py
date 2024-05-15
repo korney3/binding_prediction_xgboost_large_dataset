@@ -3,7 +3,6 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import pyarrow.parquet as pq
 import yaml
 
@@ -47,12 +46,12 @@ def main():
     num_weak_learners = (weak_learners_train_size //
                          ensemble_config.yaml_config.model_config.weak_learner_config["train"]["train_size"])
     ensemble_config.yaml_config.model_config.num_weak_learners = num_weak_learners
-    save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners,
+    save_weak_learners_data_indices(args.input_parquet, ensemble_config,
                                     parent_logs_dir, rng)
 
     for i in range(num_weak_learners):
         pretty_print_text(f"Training weak learner {i}")
-        train_weak_learner(train_val_pq, args, i, parent_logs_dir)
+        train_weak_learner(args.input_parquet, i, parent_logs_dir)
 
     pretty_print_text("Training ensemble model")
     final_ensemble_model_indices = np.load(os.path.join(parent_logs_dir, 'final_ensemble_model_indices.npy'))
@@ -65,26 +64,35 @@ def main():
     evaluate_test_set(ensemble_config, args.test_parquet, args.debug)
 
 
-def train_weak_learner(train_val_pq, args, weak_learner_num, parent_logs_dir):
+def train_weak_learner(train_parquet_path,
+                       test_parquet_path,
+                       config_path,
+                       weak_learner_num,
+                       parent_logs_dir,
+                       debug=False,
+                       rng=np.random.default_rng(seed=42)):
+
     train_val_indices = np.load(os.path.join(parent_logs_dir, f'weak_learner_{weak_learner_num}_indices.npy'))
+
+    train_val_pq = pq.ParquetFile(train_parquet_path)
     logs_dir = os.path.join(parent_logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{weak_learner_num}')
     os.makedirs(logs_dir, exist_ok=True)
     neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq,
                                                                        indices=train_val_indices)
-    with open(args.config_path, 'r') as file:
+    with open(config_path, 'r') as file:
         weak_learner_config_dict = yaml.safe_load(file)["model"]["weak_learner_config"]
-    config = create_config(train_file_path=args.input_parquet, test_file_path=args.test_parquet,
+    config = create_config(train_file_path=train_parquet_path, test_file_path=test_parquet_path,
                            logs_dir=logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
                            config=weak_learner_config_dict)
     training_pipeline = TrainingPipeline(config,
-                                         debug=args.debug,
-                                         rng=np.random.default_rng(seed=42),
+                                         debug=debug,
+                                         rng=rng,
                                          train_val_indices=train_val_indices)
     training_pipeline.run()
 
-    evaluate_validation_set(config, args.input_parquet, args.debug)
+    evaluate_validation_set(config, train_parquet_path, debug)
 
-    evaluate_test_set(config, args.test_parquet, args.debug)
+    evaluate_test_set(config, test_parquet_path, debug)
 
     delete_xgboost_cache()
 
@@ -96,7 +104,9 @@ def delete_xgboost_cache():
         os.remove(cache_file)
 
 
-def save_weak_learners_data_indices(train_val_pq, ensemble_config, num_weak_learners, parent_logs_dir, rng):
+def save_weak_learners_data_indices(train_parquet_path, ensemble_config, parent_logs_dir, rng):
+    train_val_pq = pq.ParquetFile(train_parquet_path)
+    num_weak_learners = ensemble_config.yaml_config.model_config.num_weak_learners
     weak_learners_train_size = train_val_pq.metadata.num_rows
     if ensemble_config.yaml_config.training_config.train_size != -1:
         weak_learners_train_size = train_val_pq.metadata.num_rows - ensemble_config.yaml_config.training_config.train_size

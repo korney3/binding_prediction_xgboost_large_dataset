@@ -4,7 +4,6 @@ import time
 
 import numpy as np
 import pyarrow.parquet as pq
-import yaml
 
 from binding_prediction.config.config import create_config
 from binding_prediction.evaluation.utils import evaluate_test_set, evaluate_validation_set
