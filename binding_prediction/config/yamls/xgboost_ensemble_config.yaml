@@ -1,0 +1,41 @@
+model:
+  name: 'xgboost_ensemble'
+  weak_learner_config:
+    model:
+      name: 'xgboost'
+      eta: 0.05
+      max_depth: 10
+      objective: 'binary:logistic'
+      eval_metric: 'map'
+      verbosity: 2
+      nthread: 50
+      tree_method: "hist"
+      grow_policy: 'depthwise'
+      subsample: 0.6
+      colsample_bytree: 0.6
+      num_boost_round: 100
+      alpha: 0.05
+    train:
+      early_stopping_rounds: 5
+      train_size: 260000
+    featurizer:
+      name: 'circular_fingerprint'
+      radius: 3
+      length: 1024
+  eta: 0.05
+  max_depth: 10
+  objective: 'binary:logistic'
+  eval_metric: 'map'
+  verbosity: 2
+  nthread: 50
+  tree_method: "hist"
+  grow_policy: 'depthwise'
+  subsample: 0.6
+  colsample_bytree: 0.6
+  num_boost_round: 100
+  alpha: 0.05
+train:
+  early_stopping_rounds: 5
+  train_size: 260000
+featurizer:
+  name: 'ensemble_predictions'

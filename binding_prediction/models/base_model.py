@@ -1,6 +1,6 @@
 from abc import ABC
 
-from binding_prediction.config.config_creation import Config
+from binding_prediction.config.config import Config
 
 
 class Model(ABC):

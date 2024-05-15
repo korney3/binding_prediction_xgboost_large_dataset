@@ -2,7 +2,7 @@ import pickle
 
 import xgboost
 
-from binding_prediction.config.config_creation import Config
+from binding_prediction.config.config import Config
 from binding_prediction.models.base_model import Model
 
 
@@ -11,9 +11,9 @@ class XGBoostModel(Model):
         super().__init__(config)
 
     def train(self, train_Xy, eval_list):
-        params = self.config.model_config.__dict__
+        params = self.config.yaml_config.model_config.__dict__
         num_rounds = params['num_boost_round']
-        early_stopping_rounds = self.config.training_config.early_stopping_rounds
+        early_stopping_rounds = self.config.yaml_config.training_config.early_stopping_rounds
 
         check_point = xgboost.callback.TrainingCheckPoint(directory=self.config.logs_dir,
                                                           iterations=1,
