@@ -6,6 +6,8 @@ PROTEIN_COLUMN = 'protein_name'
 PROTEIN_MAP_JSON_PATH = 'data/processed/protein_map.json'
 
 WEAK_LEARNER_ARTIFACTS_NAME_PREFIX = 'weak_learner_'
+FINAL_ENSEMBLE_MODEL_ARTIFACTS_NAME_PREFIX = 'final_ensemble_model_'
+
 
 @dataclass
 class ModelTypes:

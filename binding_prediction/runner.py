@@ -1,11 +1,12 @@
 import os
 
 import numpy as np
-
+import typing as tp
 import yaml
 
 from binding_prediction.config.config import Config
-from binding_prediction.const import ModelTypes, WEAK_LEARNER_ARTIFACTS_NAME_PREFIX
+from binding_prediction.const import ModelTypes, WEAK_LEARNER_ARTIFACTS_NAME_PREFIX, \
+    FINAL_ENSEMBLE_MODEL_ARTIFACTS_NAME_PREFIX
 from binding_prediction.evaluation.utils import evaluate_validation_set, evaluate_test_set
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import create_logs_dir, pretty_print_text, \
@@ -14,7 +15,7 @@ from binding_prediction.xgboost_ensemble_training_pipeline import save_weak_lear
 
 
 class Runner:
-    def __init__(self,train_parquet_path: str,
+    def __init__(self, train_parquet_path: str,
                  test_parquet_path: str,
                  config_path: str,
                  debug: bool = False,
@@ -45,11 +46,12 @@ class Runner:
 
 
 def train_and_evaluate(config: Config, config_path: str, debug: bool = False,
-                       rng: np.random.Generator = np.random.default_rng(seed=42)):
+                       rng: np.random.Generator = np.random.default_rng(seed=42),
+                       train_val_indices: tp.Optional[list[int]] = None):
     if config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE:
         for i in range(config.yaml_config.model_config.num_weak_learners):
             pretty_print_text(f"Training weak learner {i}")
-            train_val_indices = np.load(os.path.join(config.logs_dir,
+            weak_train_val_indices = np.load(os.path.join(config.logs_dir,
                                                      f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}_indices.npy'))
             logs_dir = os.path.join(config.logs_dir, f'{WEAK_LEARNER_ARTIFACTS_NAME_PREFIX}{i}')
 
@@ -58,13 +60,16 @@ def train_and_evaluate(config: Config, config_path: str, debug: bool = False,
                 weak_learner_config = get_config(config.train_file_path,
                                                  config.test_file_path,
                                                  weak_learner_config_dict, logs_dir,
-                                                 train_val_indices)
+                                                 weak_train_val_indices)
             train_and_evaluate(weak_learner_config,
                                config_path, debug,
-                               rng)
+                               rng, weak_train_val_indices)
+        train_val_indices = np.load(os.path.join(config.logs_dir,
+                                                 f'{FINAL_ENSEMBLE_MODEL_ARTIFACTS_NAME_PREFIX}indices.npy'))
     training_pipeline = TrainingPipeline(config,
                                          debug=debug,
-                                         rng=rng)
+                                         rng=rng,
+                                         train_val_indices=train_val_indices)
     training_pipeline.run()
     evaluate_validation_set(config, config.train_file_path, debug)
     evaluate_test_set(config, config.test_file_path, debug)

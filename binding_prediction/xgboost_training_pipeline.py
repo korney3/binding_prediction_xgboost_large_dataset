@@ -7,6 +7,7 @@ import pyarrow.parquet as pq
 
 from binding_prediction.config.config import create_config
 from binding_prediction.evaluation.utils import evaluate_test_set, evaluate_validation_set
+from binding_prediction.runner import Runner
 from binding_prediction.training.training_pipeline import TrainingPipeline
 from binding_prediction.utils import calculate_number_of_neg_and_pos_samples
 
@@ -24,27 +25,11 @@ def parse_args():
 def main():
     args = parse_args()
 
-    current_date = time.strftime("%Y-%m-%d_%H-%M-%S")
-
-    logs_dir = os.path.join('logs', current_date)
-    os.makedirs(logs_dir, exist_ok=True)
-
-    train_val_pq = pq.ParquetFile(args.input_parquet)
-    neg_samples, pos_samples = calculate_number_of_neg_and_pos_samples(train_val_pq)
-
-    config = create_config(train_file_path=args.input_parquet, test_file_path=args.test_parquet,
-                           logs_dir=logs_dir, neg_samples=neg_samples, pos_samples=pos_samples,
-                           config=args.config_path)
-
-    training_pipeline = TrainingPipeline(config,
-                                         debug=args.debug,
-                                         rng=np.random.default_rng(seed=42))
-
-    training_pipeline.run()
-
-    evaluate_validation_set(config, args.input_parquet, args.debug)
-
-    evaluate_test_set(config, args.test_parquet, args.debug)
+    runner = Runner(train_parquet_path=args.input_parquet,
+                    test_parquet_path=args.test_parquet,
+                    config_path=args.config_path, debug=args.debug,
+                    logs_dir_location="logs", seed=42)
+    runner.run()
 
 
 if __name__ == '__main__':
