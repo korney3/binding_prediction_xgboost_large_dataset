@@ -84,6 +84,8 @@ class TrainingPipeline:
         if self.config.yaml_config.training_config.train_size != -1 and self.config.yaml_config.training_config.train_size < train_size:
             self.train_val_indices = self.rng.choice(self.train_val_indices,
                                                      self.config.yaml_config.training_config.train_size, replace=False)
+        else:
+            self.train_val_indices = self.rng.permutation(self.train_val_indices)
         if (0 <
                 self.config.yaml_config.training_config.target_scale_pos_weight <
                 self.config.neg_samples / self.config.pos_samples):
