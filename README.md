@@ -35,7 +35,6 @@ the `data` folder.
 
 ## Train XGBoost model
 
-Best test MAP score - 0.414
 
 ### Config files
 
