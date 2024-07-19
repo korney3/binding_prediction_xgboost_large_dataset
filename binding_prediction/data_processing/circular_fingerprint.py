@@ -1,5 +1,6 @@
 import typing as tp
 from functools import partial
+from logging import Logger
 
 import numpy as np
 from rdkit import Chem, DataStructs
@@ -11,8 +12,8 @@ from binding_prediction.data_processing.base_featurizer import Featurizer
 
 class CircularFingerprintFeaturizer(Featurizer):
     def __init__(self, config: Config,
-                 pq_file_path: str):
-        super().__init__(config, pq_file_path)
+                 pq_file_path: str, logger: tp.Optional[Logger] = None):
+        super().__init__(config, pq_file_path, logger=logger)
 
     def featurize(self):
         partial_smiles_to_fingerprint = (

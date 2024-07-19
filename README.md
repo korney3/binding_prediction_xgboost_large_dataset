@@ -30,28 +30,135 @@ pip install -e .
 Get the data from the [Kaggle competition page](https://www.kaggle.com/competitions/leash-BELKA/data) and save it in
 the `data` folder.
 
-# XGBoost model
+
+# Usage
+
+## Train XGBoost model
 
 Best test MAP score - 0.414
 
-## Train XGBoost model
+### Config files
 
 Currently available config files:
 - `binding_prediction/config/yamls/xgboost_config.yaml` - config for training a single XGBoost model with circular fingerprints
 - `binding_prediction/config/yamls/xgboost_maccs_config.yaml` - config for training a single XGBoost model with MACCS fingerprints
 
+Configs are in YAML format and have the following structure:
+```yaml
+model: # Parameters related to XGBoost model architecture
+  name: 'xgboost'
+  eta: 0.05
+  max_depth: 10
+  objective: 'binary:logistic'
+  eval_metric: 'map'
+  verbosity: 2
+  nthread: 50
+  tree_method: "hist"
+  grow_policy: 'depthwise'
+  subsample: 0.6
+  colsample_bytree: 0.6
+  num_boost_round: 100
+  alpha: 0.05
+  device: 'cpu' # Set to 'gpu' if you have GPU 
+train:
+  early_stopping_rounds: 5
+  train_size: 26000000 # Number of samples from input parquet file to use for training
+featurizer:
+  name: 'circular_fingerprint' # or 'maccs_fingerprint'
+  radius: 3
+  length: 1024
+```
+For more information about fields in config files, please refer to the [Config module](binding_prediction/config/config.py).
+
+### Run training
+
 ```bash
-python binding_prediction/xgboost_training_pipeline.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \
-                                                       --test_parquet PATH_TO_INPUT_TEST_PARQUET_FILE \
-                                                       --config_path PATH_TO_YAML_WITH_CONFIG
+python binding_prediction/run_training.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \
+                                          --test_parquet PATH_TO_INPUT_TEST_PARQUET_FILE \
+                                          --config_path PATH_TO_YAML_WITH_CONFIG
 ```
 
-If You want to run it in debug mode, add `--debug` flag.
+If You want to run it in debug mode, add `--debug` flag. It will run training on a small subset of data.
+
+### Output
+
+After training is finished, you'll see new directory with timestamp of training start in the `logs` directory.
+Inside this directory, you'll find:
+- `model.pkl` - trained XGBoost model
+- `model_{boosting_round}.pkl` - trained XGBoost model for each boosting round
+- `config.yaml` - config file used for training
+- `train_indices.npy` - indices of samples in input parquet file used for training
+- `val_indices.npy` - indices of samples in input parquet file used for testing
+- `{input_parquet_file_name}_metrics.csv` - Average Precision, ROC AUC and Accuracy metrics for validation set for final model
+- `submission.csv` - submission file with predictions for test set in the format required by Kaggle competition
+
 
 ## Train XGBoost Ensemble model
 
-```bash
-python binding_prediction/xgboost_ensemble_training_pipeline.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \
-                                                                --test_parquet PATH_TO_INPUT_TEST_PARQUET_FILE \
-                                                                --config_path binding_prediction/config/yamls/xgboost_ensemble_config.yaml
+### Config files
+
+Currently available config files:
+- `binding_prediction/config/yamls/xgboost_ensemble_config.yaml` - config for training ensemble of XGBoost models
+
+
+Configs are in YAML format and have the following structure:
+```yaml
+model:
+  name: 'xgboost_ensemble'
+  weak_learner_config: # Config for each weak learner. Here you can use any config from xgboost_config.yaml
+    model:
+      name: 'xgboost'
+      eta: 0.05
+      max_depth: 10
+      objective: 'binary:logistic'
+      eval_metric: 'map'
+      verbosity: 2
+      nthread: 50
+      tree_method: "hist"
+      grow_policy: 'depthwise'
+      subsample: 0.6
+      colsample_bytree: 0.6
+      num_boost_round: 100
+      alpha: 0.05
+      device: 'cpu' # Set to 'gpu' if you have GPU
+    train:
+      early_stopping_rounds: 5
+      train_size: 26000000
+    featurizer:
+      name: 'circular_fingerprint'
+      radius: 3
+      length: 1024
+  eta: 0.05 # This is start of model parameters for ensemble model itself
+  max_depth: 10
+  objective: 'binary:logistic'
+  eval_metric: 'map'
+  verbosity: 2
+  nthread: 50
+  tree_method: "hist"
+  grow_policy: 'depthwise'
+  subsample: 0.6
+  colsample_bytree: 0.6
+  num_boost_round: 100
+  alpha: 0.05
+  device: 'cpu' # Set to 'gpu' if you have GPU
+train:
+  early_stopping_rounds: 5
+  train_size: 26000000
+featurizer:
+  name: 'ensemble_predictions'
 ```
+
+```bash
+python binding_prediction/run_training.py --input_parquet PATH_TO_INPUT_TRAIN_PARQUET_FILE \
+                                          --test_parquet PATH_TO_INPUT_TEST_PARQUET_FILE \
+                                          --config_path binding_prediction/config/yamls/xgboost_ensemble_config.yaml
+```
+
+If You want to run it in debug mode, add `--debug` flag. It will run training on a small subset of data.
+
+### Output
+
+After training is finished, you'll see new directory with timestamp of training start in the `logs` directory.
+Inside this directory, you'll find all the same files as for single XGBoost model training, which will refer to the ensemble model.
+Also for each weak learner, they will be stored in subdirectories of log directory with names `weak_learner_{i}`.
+

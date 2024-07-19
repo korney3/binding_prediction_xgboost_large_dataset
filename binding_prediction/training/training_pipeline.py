@@ -1,27 +1,33 @@
+import logging
 import os
+from logging import Logger
 
 import numpy as np
 import pyarrow.parquet as pq
 import xgboost
-import yaml
 
 from binding_prediction.config.config import Config
-from binding_prediction.const import TARGET_COLUMN, PROTEIN_MAP_JSON_PATH
-from binding_prediction.data_processing.utils import get_featurizer
-from binding_prediction.datasets.xgboost_iterator import SmilesIterator
-from binding_prediction.evaluation.kaggle_submission_creation import get_submission_test_predictions_for_xgboost_model
-from binding_prediction.models.xgboost_model import XGBoostModel
-from binding_prediction.utils import timing_decorator, pretty_print_text
 from binding_prediction.const import ModelTypes
+from binding_prediction.const import TARGET_COLUMN
+from binding_prediction.datasets.xgboost_iterator import SmilesIterator
+from binding_prediction.models.xgboost_model import XGBoostModel
+from binding_prediction.utils import timing_decorator, pretty_print_text, save_config
 
 
 class TrainingPipeline:
     def __init__(self, config: Config,
                  debug: bool = False,
                  rng: np.random.Generator = np.random.default_rng(seed=42),
-                 train_val_indices=None):
+                 train_val_indices=None,
+                 logger: Logger = None):
         self.config = config
-        self.save_config()
+        save_config(self.config)
+
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(name=__name__)
+            self.logger.setLevel(logging.INFO)
 
         self.debug = debug
         self.rng = rng
@@ -30,7 +36,6 @@ class TrainingPipeline:
 
         self.train_val_pq = pq.ParquetFile(self.config.train_file_path)
         if train_val_indices is not None:
-            assert self.config.yaml_config.training_config.pq_groups_numbers is None
             self.train_val_indices = train_val_indices
         else:
             self.train_val_indices = np.arange(self.train_val_pq.metadata.num_rows)
@@ -39,15 +44,11 @@ class TrainingPipeline:
         if (self.config.yaml_config.model_config.name == ModelTypes.XGBOOST or
                 self.config.yaml_config.model_config.name == ModelTypes.XGBOOST_ENSEMBLE):
             train_Xy, val_Xy = self.prepare_train_val_data()
-            self.save_config()
+            save_config(self.config)
             self.model = XGBoostModel(self.config)
             self.train(train_Xy, val_Xy)
         else:
             raise ValueError(f"Model type {self.config.yaml_config.model_config.name} is not supported")
-
-    def save_config(self):
-        with open(os.path.join(self.config.logs_dir, 'config.yaml'), 'w') as file:
-            yaml.dump(self.config.__dict__, file)
 
     @timing_decorator
     def train(self, train_dataset, val_dataset):
@@ -66,20 +67,10 @@ class TrainingPipeline:
         train_size = len(self.train_val_indices)
         if self.debug:
             train_size = 50000
-            print(f"DEBUG MODE: Using only {train_size} samples for training")
+            self.logger.warning(f"DEBUG MODE: Using only {train_size} samples for training")
             self.train_val_indices = self.rng.choice(self.train_val_indices,
                                                      train_size,
                                                      replace=False)
-        else:
-            if self.config.yaml_config.training_config.pq_groups_numbers is not None:
-                train_size = 0
-                self.train_val_indices = []
-                shard_size = self.train_val_pq.metadata.row_group(0).num_rows
-                for group_number in self.config.yaml_config.training_config.pq_groups_numbers:
-                    train_size += self.train_val_pq.metadata.row_group(group_number).num_rows
-                    start_index = shard_size * group_number
-                    self.train_val_indices.extend(
-                        range(start_index, start_index + self.train_val_pq.metadata.row_group(group_number).num_rows))
 
         if self.config.yaml_config.training_config.train_size != -1 and self.config.yaml_config.training_config.train_size < train_size:
             self.train_val_indices = self.rng.choice(self.train_val_indices,
@@ -89,10 +80,10 @@ class TrainingPipeline:
         if (0 <
                 self.config.yaml_config.training_config.target_scale_pos_weight <
                 self.config.neg_samples / self.config.pos_samples):
-            pretty_print_text("Adding positive samples to training set")
+            self.logger.info("Adding positive samples to training set")
             pos_samples_indices = self.sample_positive_indexes_to_add_to_train(self.train_val_pq,
                                                                                self.train_val_indices)
-            print(f"Got {len(pos_samples_indices)} indices")
+            self.logger.info(f"Got {len(pos_samples_indices)} indices")
             self.train_val_indices = np.concatenate([self.train_val_indices, pos_samples_indices])
             self.train_val_indices = self.rng.permutation(self.train_val_indices)
 
@@ -108,10 +99,10 @@ class TrainingPipeline:
 
             train_dataset = SmilesIterator(self.config, self.config.train_file_path,
                                            indicies=train_indices,
-                                           shuffle=True)
+                                           shuffle=True, logger=self.logger)
 
             val_dataset = SmilesIterator(self.config, self.config.train_file_path,
-                                         indicies=val_indices, shuffle=True)
+                                         indicies=val_indices, shuffle=True, logger=self.logger)
 
             train_Xy = xgboost.DMatrix(train_dataset)
             val_Xy = xgboost.DMatrix(val_dataset)
@@ -129,13 +120,13 @@ class TrainingPipeline:
             pos_samples_indexes.extend([x + last_index for x in row_group[row_group[TARGET_COLUMN] == 1].index])
             last_index += group_size
         pos_samples_indexes = np.array(pos_samples_indexes)
-        print(f"Got {len(pos_samples_indexes)} positive samples")
+        self.logger.debug(f"Got {len(pos_samples_indexes)} positive samples")
         pos_samples_to_sample = int(
             self.config.neg_samples / self.config.yaml_config.training_config.target_scale_pos_weight - self.config.pos_samples)
-        print(f"Sampling {pos_samples_to_sample} positive samples")
+        self.logger.debug(f"Sampling {pos_samples_to_sample} positive samples")
         pos_samples = self.rng.choice(pos_samples_indexes, pos_samples_to_sample, replace=False)
         pos_samples_not_in_train_val = np.setdiff1d(pos_samples, train_val_indices)
-        print(f"Got {len(pos_samples_not_in_train_val)} positive samples not in validation set")
+        self.logger.debug(f"Got {len(pos_samples_not_in_train_val)} positive samples not in validation set")
         if self.debug:
             pos_samples_not_in_train_val = pos_samples_not_in_train_val[:10000]
         return pos_samples_not_in_train_val
